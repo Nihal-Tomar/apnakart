@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ApnaKart — Smart Daily Needs 🛒
+
+A modern, production-ready web application for Indian users to manage daily needs — grocery browsing, AI-powered recommendations, budget tracking, and subscription management.
+
+## Features
+
+- 🛍️ **Grocery Store** — Browse 30+ Indian grocery items with categories, search, and filters
+- 🛒 **Smart Cart** — AI-powered "you might also need" recommendations
+- 💰 **Budget Dashboard** — Expense tracking, category breakdown, spending charts
+- 🤖 **AI Assistant** — Multi-agent system (Planner, Budget, Shopping, Execution)
+- 🔄 **Subscriptions** — Track milk, gas, electricity, and other recurring services
+- 🍽️ **Meal Plans** — Weekly meal planning with cost estimates
+- 🌙 **Dark/Light Mode** — Beautiful, premium UI with theme toggle
+- 📱 **Mobile-First** — Fully responsive design
+
+## Tech Stack
+
+- **Frontend:** Next.js 15 (App Router) + TypeScript
+- **Styling:** Tailwind CSS v4 + CSS Custom Properties
+- **State:** React Context API
+- **AI:** Simulated multi-agent system (ready for OpenAI/Claude integration)
+- **API:** Next.js API Routes
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Run dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Folder Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── page.tsx            # Home Dashboard
+│   ├── store/page.tsx      # Grocery Store
+│   ├── cart/page.tsx       # Cart & Checkout
+│   ├── budget/page.tsx     # Budget Dashboard
+│   ├── assistant/page.tsx  # AI Assistant
+│   ├── login/page.tsx      # Authentication
+│   └── api/                # API Routes
+│       ├── products/       # Product catalog
+│       ├── cart/            # Cart operations
+│       ├── budget/         # Budget & transactions
+│       └── agents/         # AI agent endpoint
+├── components/
+│   └── layout/             # Sidebar, Header, ClientLayout
+├── lib/
+│   ├── agents/             # AI multi-agent system
+│   ├── data/               # Mock data
+│   ├── hooks/              # Custom React hooks
+│   ├── context.tsx         # Cart & Theme providers
+│   └── utils.ts            # Utility functions
+└── types/                  # TypeScript definitions
+```
 
-## Learn More
+## Promo Codes
 
-To learn more about Next.js, take a look at the following resources:
+Try `APNA10` or `FIRST10` in the cart for 10% discount!
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## AI Agents
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Agent | Role |
+|-------|------|
+| 🧠 Planner | Analyzes habits & suggests daily needs |
+| 💰 Budget | Tracks & optimizes spending |
+| 🛒 Shopping | Auto-builds smart carts |
+| ⚡ Execution | Finalizes actions & workflow |
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
