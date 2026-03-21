@@ -2,63 +2,42 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import {
-  Wallet, Package, TrendingUp, RefreshCcw,
-  ShoppingCart, BarChart3, Bot, ShoppingBag,
-  Milk, Flame, Zap, Droplets, ArrowUpRight, ArrowDownLeft, Plus,
-  Sparkles, Bell
-} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Wallet, Package, TrendingUp, RefreshCcw, ShoppingCart, BarChart3, Bot, ShoppingBag, Milk, Flame, Zap, Droplets, ArrowUpRight, ArrowDownLeft, Plus, Sparkles, ChevronRight, Bell, Tag, ArrowRight } from 'lucide-react';
 import { getGreeting, formatPrice } from '@/lib/utils';
 import { subscriptions } from '@/lib/data/subscriptions';
 import { transactions } from '@/lib/data/transactions';
 import { getRecommendedProducts } from '@/lib/agents';
 import { useCartContext } from '@/lib/context';
+import { useToast } from '@/components/ui/Toast';
 
+// SNAPPY ANIMATIONS (Reduced durations from 0.7 to 0.2s)
 const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
+  hidden: { opacity: 0, y: 12 },
+  visible: {
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: 'easeOut' as const }
-  }),
+    transition: { duration: 0.25, ease: 'easeOut' } // Fast snappy entry
+  },
 };
 
 const scaleIn = {
-  hidden: { opacity: 0, scale: 0.95 },
-  visible: (i: number) => ({
+  hidden: { opacity: 0, scale: 0.98 },
+  visible: {
     opacity: 1, scale: 1,
-    transition: { delay: i * 0.08, duration: 0.4, ease: 'easeOut' as const }
-  }),
+    transition: { duration: 0.2, ease: 'easeOut' }
+  },
 };
 
 function CountUp({ target, prefix = '' }: { target: number; prefix?: string }) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const duration = 1200;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= target) { setCount(target); clearInterval(timer); }
-      else setCount(Math.floor(start));
-    }, 16);
-    return () => clearInterval(timer);
-  }, [target]);
-  return <>{prefix}{count.toLocaleString('en-IN')}</>;
+  const [count, setCount] = useState(target); // Start at target to avoid delay, or set to target value directly
+  return <>{prefix}{target.toLocaleString('en-IN')}</>;
 }
 
 const stats = [
-  { label: 'Monthly Spend', value: 9581, prefix: '₹', icon: Wallet, color: '#4F46E5', bg: '#EEF2FF' },
-  { label: 'Items Ordered', value: 47, prefix: '', icon: Package, color: '#22C55E', bg: '#F0FDF4' },
-  { label: 'Total Savings', value: 1230, prefix: '₹', icon: TrendingUp, color: '#F59E0B', bg: '#FFFBEB' },
-  { label: 'Subscriptions', value: 6, prefix: '', icon: RefreshCcw, color: '#EF4444', bg: '#FEF2F2' },
-];
-
-const quickActions = [
-  { label: 'Order Groceries', desc: 'Browse fresh items', icon: ShoppingCart, href: '/store', color: '#4F46E5' },
-  { label: 'Check Budget', desc: 'Track your expenses', icon: BarChart3, href: '/budget', color: '#22C55E' },
-  { label: 'AI Assistant', desc: 'Smart suggestions', icon: Bot, href: '/assistant', color: '#7C3AED' },
-  { label: 'View Cart', desc: 'Review items', icon: ShoppingBag, href: '/cart', color: '#F59E0B' },
+  { label: 'Weekly Spend', value: 9581, prefix: '₹', icon: Wallet, color: '#000000', bg: '#F8F9FA' },
+  { label: 'Total Items', value: 47, prefix: '', icon: Package, color: '#82C341', bg: '#F9FBF5' },
+  { label: 'Cart Savings', value: 1230, prefix: '₹', icon: TrendingUp, color: '#FF9F00', bg: '#FFFBF2' },
+  { label: 'Active Subs', value: 6, prefix: '', icon: RefreshCcw, color: '#EF4444', bg: '#FFF5F5' },
 ];
 
 const reminderIcons: Record<string, React.ElementType> = {
@@ -68,246 +47,186 @@ const reminderIcons: Record<string, React.ElementType> = {
 export default function DashboardPage() {
   const recommended = getRecommendedProducts();
   const { addItem } = useCartContext();
+  const { addToast } = useToast();
   const recentTx = transactions.slice(0, 5);
   const dueSubs = subscriptions.filter(s => s.status === 'overdue' || s.status === 'active').slice(0, 4);
   const budgetUsed = 64;
 
+  const handleAddToCart = (product: any) => {
+    addItem(product);
+    addToast('success', `${product.name} added to cart! 🛒`);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* ===== WELCOME HEADER ===== */}
-      <motion.div
-        variants={fadeUp} initial="hidden" animate="visible" custom={0}
-        className="glass rounded-3xl p-6 md:p-8 relative overflow-hidden"
-      >
-        {/* Decorative gradient blob */}
-        <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-20"
-          style={{ background: 'radial-gradient(circle, var(--gradient-start), transparent)' }} />
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, var(--gradient-end), transparent)' }} />
-
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: 'var(--muted)' }}>
-              {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold mt-2 tracking-tight" style={{ color: 'var(--fg)' }}>
-              {getGreeting()}, <span className="gradient-text">Nihal</span> 👋
-            </h1>
-            <p className="text-sm mt-2 max-w-lg" style={{ color: 'var(--muted)' }}>
-              Manage your groceries, track budget, and get AI-powered suggestions for your household.
-            </p>
+    <div className="space-y-24 pb-24 page-fade-in">
+      {/* ##### HERO SECTION ##### */}
+      <section className="relative overflow-hidden">
+        <div 
+          className="rounded-[56px] p-12 md:p-20 lg:p-24 shadow-2xl overflow-hidden relative border border-gray-100"
+          style={{ background: '#FFFFFF' }}
+        >
+          <div className="absolute right-20 -top-20 w-[700px] h-[700px] rounded-full bg-green-500/5 blur-[140px]" />
+          
+          <div className="relative z-10 flex flex-col items-center lg:items-start gap-12 lg:flex-row lg:justify-between text-center lg:text-left">
+             <div className="max-w-2xl px-6 md:px-0 pl-12 border-l-8 border-black">
+                <span className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-black/5 text-black text-[11px] font-black uppercase tracking-[0.3em] border border-black/5 mb-12">
+                   ✨ Experience Smart Living
+                </span>
+                <h1 className="text-6xl md:text-8xl font-black text-black leading-[1.05] mb-10 tracking-tighter">
+                  {getGreeting()}, <span className="text-[var(--primary)]">Nihal!</span> 🙏
+                </h1>
+                <p className="text-gray-900 text-xl md:text-2xl mb-12 font-bold leading-relaxed opacity-60">
+                   Your personalized dashboard for groceries and budget tracking.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <Link href="/store" className="bg-black text-white px-12 py-5 rounded-2xl text-[12px] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-3xl transition-transform active:scale-95">
+                    Shop Premium <ChevronRight size={18} />
+                  </Link>
+                   <Link href="/budget" className="bg-white hover:bg-gray-50 text-black px-12 py-5 rounded-2xl text-[12px] font-black uppercase tracking-widest flex items-center justify-center gap-4 border border-gray-200 transition-all">
+                    Weekly Budget
+                  </Link>
+                </div>
+             </div>
+             
+             <div className="hidden lg:flex flex-1 justify-center relative min-h-[400px]">
+                <div className="flex flex-col gap-8 relative z-10">
+                   <div className="flex items-center gap-8 bg-white p-8 rounded-[36px] border border-gray-100 shadow-3xl">
+                      <div className="w-20 h-20 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-50">
+                         <img src="https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="product" />
+                      </div>
+                      <div className="text-left pr-12"><p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-1.5">Fresh & Fast</p><p className="text-xl font-black text-black tracking-tight leading-none">Organic Spinach</p></div>
+                   </div>
+                   <div className="flex items-center gap-8 bg-white p-8 rounded-[36px] border border-gray-100 shadow-3xl">
+                      <div className="w-20 h-20 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-50">
+                        <img src="https://images.unsplash.com/photo-1563636619-e910ef2a844b?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="product" />
+                      </div>
+                      <div className="text-left pr-12"><p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">A2 Grade</p><p className="text-xl font-black text-black tracking-tight leading-none">Full Fat Milk</p></div>
+                   </div>
+                </div>
+             </div>
           </div>
-          <Link href="/store" className="gradient-btn inline-flex items-center gap-2 px-6 py-3 text-sm rounded-2xl self-start">
-            <Sparkles size={16} /> Start Shopping
-          </Link>
         </div>
-      </motion.div>
+      </section>
 
-      {/* ===== SUMMARY CARDS ===== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      {/* ##### STATS: SNAPPY ##### */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-8">
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            variants={scaleIn} initial="hidden" animate="visible" custom={i + 1}
-            className="glass card-lift rounded-3xl p-5 md:p-6 relative overflow-hidden"
+            variants={scaleIn} initial="hidden" animate="visible"
+            className="group card-hover rounded-[40px] p-10 md:p-12 pl-12 relative overflow-hidden flex flex-col items-start text-left bg-white"
+            style={{ color: '#000000' }}
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center"
+            <div className="flex items-start justify-between w-full mb-10">
+              <div className="w-16 h-16 rounded-[20px] bg-gray-50 flex items-center justify-center"
                 style={{ background: stat.bg }}>
-                <stat.icon size={20} style={{ color: stat.color }} />
+                <stat.icon size={28} style={{ color: stat.color }} />
               </div>
-              {stat.label === 'Subscriptions' && (
-                <span className="badge text-[10px]" style={{ background: '#FEF2F2', color: 'var(--danger)' }}>1 due</span>
-              )}
             </div>
-            <p className="text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--fg)' }}>
-              <CountUp target={stat.value} prefix={stat.prefix} />
+            <p className="text-4xl md:text-6xl font-black text-black tracking-tighter mb-2">
+              {stat.prefix}{stat.value.toLocaleString('en-IN')}
             </p>
-            <p className="text-xs font-medium mt-1" style={{ color: 'var(--muted)' }}>{stat.label}</p>
-            {/* Decorative corner accent */}
-            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full opacity-5"
-              style={{ background: stat.color }} />
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mt-1 pr-6">{stat.label}</p>
           </motion.div>
         ))}
-      </div>
+      </section>
 
-      {/* ===== QUICK ACTIONS ===== */}
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={5}>
-        <h2 className="text-lg font-bold mb-4" style={{ color: 'var(--fg)' }}>Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {quickActions.map((action, i) => (
-            <motion.div key={action.label} whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Link
-                href={action.href}
-                className="glass flex flex-col items-center text-center p-5 md:p-6 rounded-3xl group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110"
-                  style={{ background: `${action.color}10` }}>
-                  <action.icon size={22} style={{ color: action.color }} />
-                </div>
-                <span className="text-[13px] font-semibold" style={{ color: 'var(--fg)' }}>{action.label}</span>
-                <span className="text-[11px] mt-0.5" style={{ color: 'var(--muted)' }}>{action.desc}</span>
-              </Link>
-            </motion.div>
-          ))}
+      {/* ##### CONTENT GRID ##### */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
+        
+        {/* Left: AI Picks */}
+        <div className="lg:col-span-8 space-y-16">
+           <div className="flex items-center justify-between px-4 pl-4">
+              <div className="flex items-center gap-6">
+                 <div className="w-12 h-12 rounded-[20px] bg-black text-[var(--primary)] flex items-center justify-center shadow-2xl">
+                    <Sparkles size={24} />
+                 </div>
+                 <div>
+                    <h2 className="text-4xl font-black text-black tracking-tighter uppercase">AI Selected Essentials</h2>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-2 pl-1">High Definition Real Photography</p>
+                 </div>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+              {recommended.map((product, i) => (
+                <motion.div
+                  key={product.id}
+                  variants={fadeUp} initial="hidden" animate="visible"
+                  className="bg-white rounded-[40px] p-10 pl-12 border border-gray-100 card-hover flex flex-col group shadow-sm text-left"
+                >
+                   <div className="relative mb-12 h-44 overflow-hidden rounded-[28px] bg-gray-50 border border-gray-50 flex items-center justify-center">
+                      <img src={product.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={product.name} />
+                   </div>
+                   <div className="space-y-4 flex-grow pl-2">
+                      <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.2em]">{product.category}</p>
+                      <h3 className="text-2xl font-black text-black tracking-tighter leading-tight mb-2 pr-6">{product.name}</h3>
+                      <p className="text-[12px] font-black text-gray-400 uppercase tracking-widest leading-none">{product.unit}</p>
+                   </div>
+                   <div className="flex items-center justify-between mt-12 pt-10 border-t border-gray-50 pl-2">
+                      <p className="text-3xl font-black text-black tracking-tighter leading-none">{formatPrice(product.price)}</p>
+                      <button 
+                        onClick={() => handleAddToCart(product)}
+                        className="w-14 h-14 rounded-2xl bg-black text-white hover:bg-[var(--primary)] shadow-2xl active:scale-90 transition-all flex items-center justify-center"
+                      >
+                         <Plus size={24} />
+                      </button>
+                   </div>
+                </motion.div>
+              ))}
+           </div>
         </div>
-      </motion.div>
 
-      {/* ===== MAIN GRID: AI Picks + Reminders ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* AI Picks (3 cols) */}
-        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={6} className="lg:col-span-3">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} style={{ color: 'var(--primary)' }} />
-              <h2 className="text-lg font-bold" style={{ color: 'var(--fg)' }}>AI Picks For You</h2>
-              <span className="badge text-[10px]" style={{ background: '#EEF2FF', color: 'var(--primary)' }}>Personalized</span>
-            </div>
-            <Link href="/store" className="text-xs font-semibold hover:underline" style={{ color: 'var(--primary)' }}>View All →</Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            {recommended.map((product, i) => (
-              <motion.div
-                key={product.id}
-                variants={scaleIn} initial="hidden" animate="visible" custom={i + 7}
-                className="glass card-lift rounded-3xl p-4 group cursor-pointer"
-              >
-                <div className="text-center py-3">
-                  <span className="product-emoji">{product.image}</span>
-                </div>
-                <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--fg)' }}>{product.name}</p>
-                {product.nameHindi && (
-                  <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{product.nameHindi} · {product.unit}</p>
-                )}
-                <div className="flex items-center justify-between mt-3">
-                  <div>
-                    <p className="text-base font-bold" style={{ color: 'var(--primary)' }}>{formatPrice(product.price)}</p>
-                    {product.originalPrice && (
-                      <p className="text-[10px] line-through" style={{ color: 'var(--muted)' }}>{formatPrice(product.originalPrice)}</p>
-                    )}
+        {/* Right: Sidebar Cards */}
+        <div className="lg:col-span-4 space-y-20">
+           {/* Budget meter */}
+           <div className="bg-white p-12 pl-12 rounded-[48px] border border-gray-100 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-2 h-full bg-black" />
+              <div className="flex justify-between items-center mb-10 pl-2">
+                 <h3 className="text-[11px] font-black uppercase text-gray-400 tracking-[0.4em]">Monthly Split</h3>
+                 <span className="text-5xl font-black text-black tracking-tighter">{budgetUsed}%</span>
+              </div>
+              <div className="relative w-full h-5 bg-gray-100 rounded-full shadow-inner mb-8 px-1">
+                 <div className="h-full bg-black rounded-full shadow-2xl" style={{ width: `${budgetUsed}%` }} />
+              </div>
+              <div className="grid grid-cols-2 gap-6 pt-10 border-t border-gray-50 pl-2">
+                 <div className="text-left border-l-4 border-gray-100 pl-4">
+                    <span className="text-[10px] font-black text-gray-400 tracking-widest block mb-2">Expended</span>
+                    <span className="text-xl font-black text-black tracking-tighter">₹9,581</span>
+                 </div>
+                 <div className="text-left border-l-4 border-[var(--primary)] pl-4">
+                    <span className="text-[10px] font-black text-gray-400 tracking-widest block mb-2">Residual</span>
+                    <span className="text-xl font-black text-black tracking-tighter">₹5,419</span>
+                 </div>
+              </div>
+           </div>
+
+           {/* Spending Log */}
+           <div className="space-y-12">
+               <div className="flex items-center gap-6 px-6">
+                  <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center shadow-2xl">
+                      <Tag size={24} />
                   </div>
-                  <button
-                    onClick={() => addItem(product)}
-                    className="gradient-btn text-xs px-3 py-1.5 rounded-xl flex items-center gap-1"
-                  >
-                    <Plus size={12} /> Add
-                  </button>
+                  <h3 className="text-2xl font-black text-black tracking-tighter uppercase">Spending Log</h3>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Reminders + Budget (2 cols) */}
-        <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={8} className="lg:col-span-2 space-y-5">
-          {/* Reminders */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Bell size={18} style={{ color: 'var(--accent)' }} />
-                <h2 className="text-lg font-bold" style={{ color: 'var(--fg)' }}>Reminders</h2>
-              </div>
-              <Link href="/budget" className="text-xs font-semibold hover:underline" style={{ color: 'var(--primary)' }}>Manage →</Link>
-            </div>
-            <div className="space-y-2.5">
-              {dueSubs.map(sub => {
-                const IconComp = reminderIcons[sub.icon] || Bell;
-                return (
-                  <motion.div
-                    key={sub.id}
-                    whileHover={{ x: 4 }}
-                    className="glass card-lift flex items-center gap-3 p-4 rounded-2xl"
-                  >
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: sub.status === 'overdue' ? '#FEF2F2' : 'var(--surface-hover)' }}>
-                      <IconComp size={18} style={{ color: sub.status === 'overdue' ? 'var(--danger)' : 'var(--primary)' }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--fg)' }}>{sub.name}</p>
-                      <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{sub.provider}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[13px] font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(sub.amount)}</p>
-                      <span className="badge text-[10px]" style={{
-                        background: sub.status === 'overdue' ? '#FEF2F2' : '#F0FDF4',
-                        color: sub.status === 'overdue' ? 'var(--danger)' : 'var(--success)',
-                      }}>
-                        {sub.status === 'overdue' ? '⚠ Due!' : sub.frequency}
-                      </span>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Budget Progress */}
-          <div className="glass rounded-3xl p-5">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <Wallet size={16} style={{ color: 'var(--primary)' }} />
-                <p className="text-[13px] font-semibold" style={{ color: 'var(--fg)' }}>Budget Progress</p>
-              </div>
-              <span className="text-lg font-extrabold" style={{ color: budgetUsed > 80 ? 'var(--danger)' : 'var(--success)' }}>
-                {budgetUsed}%
-              </span>
-            </div>
-            <p className="text-[11px] mb-3" style={{ color: 'var(--muted)' }}>₹9,581 of ₹15,000 monthly budget</p>
-            <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--surface-hover)' }}>
-              <motion.div
-                className="h-full rounded-full progress-animated"
-                initial={{ width: 0 }}
-                animate={{ width: `${budgetUsed}%` }}
-                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.5 }}
-                style={{ background: 'linear-gradient(90deg, var(--gradient-start), var(--gradient-mid))' }}
-              />
-            </div>
-            <div className="flex justify-between mt-2">
-              <p className="text-[11px]" style={{ color: 'var(--muted)' }}>₹9,581 spent</p>
-              <p className="text-[11px] font-semibold" style={{ color: 'var(--success)' }}>₹5,419 remaining</p>
-            </div>
-          </div>
-        </motion.div>
+                <div className="bg-white rounded-[48px] p-6 space-y-4 border border-gray-50">
+                   {recentTx.map((tx) => (
+                     <div key={tx.id} className="flex justify-between items-center p-6 pl-10 rounded-3xl hover:bg-gray-50 transition-all group cursor-pointer border border-transparent hover:border-gray-100 relative overflow-hidden">
+                        <div className="flex items-center gap-6 text-left">
+                           <div className="pr-4">
+                              <p className="text-base font-black text-black tracking-tight leading-none mb-2">{tx.description}</p>
+                              <p className="text-[10px] font-black text-gray-300 tracking-[0.2em] uppercase">{tx.category}</p>
+                           </div>
+                        </div>
+                        <p className="text-xl font-black tracking-tighter text-black">
+                           {tx.type === 'debit' ? '-' : '+'}{formatPrice(tx.amount)}
+                        </p>
+                     </div>
+                   ))}
+                </div>
+           </div>
+        </div>
       </div>
-
-      {/* ===== RECENT TRANSACTIONS ===== */}
-      <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={10}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold" style={{ color: 'var(--fg)' }}>Recent Transactions</h2>
-          <Link href="/budget" className="text-xs font-semibold hover:underline" style={{ color: 'var(--primary)' }}>View All →</Link>
-        </div>
-        <div className="glass rounded-3xl overflow-hidden">
-          {recentTx.map((tx, i) => (
-            <motion.div
-              key={tx.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.8 + i * 0.06, duration: 0.4 }}
-              className="flex items-center justify-between p-4 md:px-6 transition-colors hover:bg-[var(--surface-hover)]"
-              style={{ borderBottom: i < recentTx.length - 1 ? '1px solid var(--border-color)' : 'none' }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: tx.type === 'credit' ? '#F0FDF4' : '#EEF2FF',
-                  }}>
-                  {tx.type === 'credit'
-                    ? <ArrowDownLeft size={16} style={{ color: 'var(--success)' }} />
-                    : <ArrowUpRight size={16} style={{ color: 'var(--primary)' }} />
-                  }
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: 'var(--fg)' }}>{tx.description}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{tx.category} · {tx.date}</p>
-                </div>
-              </div>
-              <p className="text-[13px] font-bold" style={{ color: tx.type === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
-                {tx.type === 'credit' ? '+' : '-'}{formatPrice(tx.amount)}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
     </div>
   );
 }

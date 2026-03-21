@@ -1,225 +1,301 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Wallet, TrendingDown, TrendingUp, ArrowUpRight, ArrowDownLeft,
-  RefreshCcw, Lightbulb, UtensilsCrossed, Calendar
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Wallet, TrendingDown, TrendingUp, ArrowUpRight, ArrowDownLeft, RefreshCcw, 
+  Lightbulb, UtensilsCrossed, Calendar, ChevronRight, BarChart3, Filter, 
+  MoreHorizontal, ArrowRight, Tag, PieChart, Activity, Zap, Download, 
+  Share2, ShieldCheck, CreditCard, Bell, MessageSquare, Mic, Plus, DownloadCloud,
+  Layers, Target, DollarSign, Clock, CircleUserRound, Info, X, HelpCircle
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
 import { transactions, categorySpending, dailySpending } from '@/lib/data/transactions';
 import { subscriptions } from '@/lib/data/subscriptions';
-import { mealPlans } from '@/lib/data/user';
+import { useTheme } from '@/lib/context';
 
-const tabs = [
-  { id: 'overview', label: 'Overview', icon: Wallet },
-  { id: 'transactions', label: 'Transactions', icon: TrendingDown },
-  { id: 'subscriptions', label: 'Subscriptions', icon: RefreshCcw },
-  { id: 'meals', label: 'Meal Plans', icon: UtensilsCrossed },
-];
+// ===== IMPORT MODULAR FINTECH COMPONENTS =====
+import CountUp from '@/components/ui/CountUp';
+import RadialGauge from '@/components/charts/RadialGauge';
+import BarChart from '@/components/charts/BarChart';
+import LineChart from '@/components/charts/LineChart';
+import FintechCard from '@/components/cards/FintechCard';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
-const tips = [
-  { icon: Lightbulb, text: 'Buy vegetables from weekly market — save ₹500/month', color: '#F59E0B' },
-  { icon: TrendingUp, text: 'Bulk buy dal & rice quarterly — save ₹400', color: '#22C55E' },
-  { icon: Lightbulb, text: 'Switch to LED lights — save ₹200/month', color: '#4F46E5' },
+const TABS = [
+  { id: 'overview', label: 'Financial Overview', icon: PieChart },
+  { id: 'transactions', label: 'Spending Log', icon: Activity },
+  { id: 'subscriptions', label: 'Household Bills', icon: Layers },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 export default function BudgetPage() {
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('overview');
-  const budgetUsed = 64;
-  const maxSpend = Math.max(...categorySpending.map(c => c.amount));
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const totalBalance = 9581;
+  const savingsGoal = 85; 
+
+  const monthlyTrendData = [180, 150, 80, 100, 40, 60];
+  const monthlyTrendLabels = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2">
-          <Wallet size={28} style={{ color: 'var(--primary)' }} />
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--fg)' }}>
-            Budget <span className="gradient-text">Dashboard</span>
-          </h1>
+    <div className="pt-32 pb-40 page-fade-in max-w-7xl mx-auto px-6 md:px-12 bg-white transition-colors duration-500 min-h-screen">
+      
+      {/* ===== HEADER: VAULT (BLACK) 360 (GREEN) ===== */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 pb-16 border-b border-gray-100 mx-4">
+        <div className="space-y-4 pl-4 border-l-[12px] border-black">
+           <div className="flex items-center gap-6">
+              <div className="w-18 h-18 rounded-[28px] bg-black text-[#82C341] flex items-center justify-center shadow-3xl transform hover:rotate-6 transition-all">
+                  <Activity size={36} />
+              </div>
+              <div className="pl-2">
+                <h1 className="text-6xl md:text-8xl font-[1000] text-black tracking-[-0.05em] leading-none uppercase">
+                  Vault <span className="text-[#82C341]">360</span>
+                </h1>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mt-3 opacity-60 pl-1">Elite Household Operating System Protocol</p>
+              </div>
+           </div>
         </div>
-        <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Track expenses, manage subscriptions, and plan meals</p>
-      </motion.div>
 
-      {/* Tabs */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}
-        className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: 'var(--surface-hover)' }}>
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200"
-            style={activeTab === tab.id
-              ? { background: 'linear-gradient(135deg, var(--gradient-start), var(--gradient-mid))', color: '#fff', boxShadow: '0 4px 15px rgba(79,70,229,0.25)' }
-              : { color: 'var(--muted)' }
-            }>
-            <tab.icon size={15} />
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
-      </motion.div>
-
-      {/* OVERVIEW TAB */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Budget Meter */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="glass rounded-3xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold" style={{ color: 'var(--fg)' }}>Monthly Budget</h3>
-              <span className="text-2xl font-extrabold" style={{ color: budgetUsed > 80 ? 'var(--danger)' : 'var(--success)' }}>
-                {budgetUsed}% <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>used</span>
-              </span>
-            </div>
-            <div className="w-full h-4 rounded-full overflow-hidden" style={{ background: 'var(--surface-hover)' }}>
-              <motion.div className="h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${budgetUsed}%` }}
-                transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
-                style={{ background: 'linear-gradient(90deg, var(--gradient-start), var(--gradient-mid))' }} />
-            </div>
-            <div className="flex justify-between mt-2 text-xs" style={{ color: 'var(--muted)' }}>
-              <span>₹9,581 spent</span><span className="font-semibold" style={{ color: 'var(--success)' }}>₹5,419 remaining</span>
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Category Spending */}
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="glass rounded-3xl p-6">
-              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--fg)' }}>Spending by Category</h3>
-              <div className="space-y-3">
-                {categorySpending.map((cat, i) => (
-                  <div key={cat.category}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="font-medium" style={{ color: 'var(--fg)' }}>{cat.category}</span>
-                      <span className="font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(cat.amount)}</span>
-                    </div>
-                    <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-hover)' }}>
-                      <motion.div className="h-full rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(cat.amount / maxSpend) * 100}%` }}
-                        transition={{ duration: 0.8, delay: 0.3 + i * 0.08, ease: 'easeOut' }}
-                        style={{ background: cat.color || 'var(--primary)' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Weekly Spending */}
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="glass rounded-3xl p-6">
-              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--fg)' }}>This Week&apos;s Spending</h3>
-              <div className="flex items-end justify-between gap-2 h-40">
-                {dailySpending.map((day, i) => (
-                  <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(day.amount)}</span>
-                    <motion.div className="w-full rounded-xl"
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.max(day.amount / 15, 8)}%` }}
-                      transition={{ duration: 0.6, delay: 0.4 + i * 0.06, ease: 'easeOut' }}
-                      style={{ background: i === dailySpending.length - 1 ? 'var(--accent)' : 'linear-gradient(180deg, var(--gradient-start), var(--gradient-mid))', minHeight: '8px' }} />
-                    <span className="text-[10px] font-medium" style={{ color: 'var(--muted)' }}>{day.day}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-
-          {/* AI Tips */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--fg)' }}>💡 Smart Tips</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {tips.map((tip, i) => (
-                <motion.div key={i} whileHover={{ y: -2 }} className="glass card-lift rounded-2xl p-4 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${tip.color}15` }}>
-                    <tip.icon size={16} style={{ color: tip.color }} />
-                  </div>
-                  <p className="text-[12px] font-medium" style={{ color: 'var(--fg)' }}>{tip.text}</p>
-                </motion.div>
+        {/* Professional Navigation Hub */}
+        <div className="flex items-center gap-6">
+           <ThemeToggle />
+           <div className="flex bg-[#F8FAFC] p-2.5 rounded-[32px] border border-gray-100 h-20 items-center px-6 shadow-[0_20px_40px_rgba(0,0,0,0.03)] backdrop-blur-xl">
+              {TABS.map(tab => (
+                <button 
+                   key={tab.id} 
+                   onClick={() => setActiveTab(tab.id)}
+                   className={`flex items-center gap-3 px-8 h-12 rounded-[20px] text-[11px] font-[900] uppercase tracking-[0.2em] transition-all duration-500 relative ${activeTab === tab.id ? 'text-white' : 'text-gray-400 hover:text-black'}`}
+                >
+                   {activeTab === tab.id && (
+                     <motion.div layoutId="tab-bg" className="absolute inset-0 bg-black rounded-[20px] shadow-2xl" />
+                   )}
+                   <tab.icon size={16} className="relative z-10" /> 
+                   <span className="relative z-10 hidden md:inline">{tab.label}</span>
+                </button>
               ))}
+           </div>
+        </div>
+      </motion.div>
+
+      {/* ===== ELITE PURE BLACK/WHITE GRID ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mt-16 px-4">
+         
+         {/* 1. BALANCE - PURE BLACK TEXT */}
+         <FintechCard className="p-16 bg-white">
+            <div className="flex justify-between items-start mb-14 pl-2">
+               <div className="w-16 h-16 rounded-[24px] bg-black text-[#82C341] flex items-center justify-center shadow-3xl">
+                  <Wallet size={30} />
+               </div>
+               <div className="flex gap-3">
+                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all"><DownloadCloud size={20} /></button>
+                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all"><Share2 size={20} /></button>
+               </div>
             </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* TRANSACTIONS TAB */}
-      {activeTab === 'transactions' && (
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-3xl overflow-hidden">
-          {transactions.map((tx, i) => (
-            <div key={tx.id} className="flex items-center justify-between p-4 md:px-6 transition-colors hover:bg-[var(--surface-hover)]"
-              style={{ borderBottom: i < transactions.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: tx.type === 'credit' ? '#F0FDF4' : '#EEF2FF' }}>
-                  {tx.type === 'credit' ? <ArrowDownLeft size={16} style={{ color: 'var(--success)' }} /> : <ArrowUpRight size={16} style={{ color: 'var(--primary)' }} />}
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: 'var(--fg)' }}>{tx.description}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{tx.category} · {tx.date}</p>
-                </div>
+            <div className="pl-2">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-6">Master Resource Scale</p>
+              <h2 className="text-7xl font-[1000] text-black tracking-tighter mb-6 leading-none">
+                <CountUp target={totalBalance} />
+              </h2>
+              <div className="flex items-center gap-4 text-green-600 font-[950] text-xs">
+                 <div className="flex items-center gap-1 bg-green-600/10 px-3 py-1.5 rounded-xl"><ArrowUpRight size={14} /> +14.2%</div>
+                 <span className="text-gray-300 font-black text-[9px] uppercase tracking-widest pl-1">Global Intensity Change</span>
               </div>
-              <p className="text-[13px] font-bold" style={{ color: tx.type === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
-                {tx.type === 'credit' ? '+' : '-'}{formatPrice(tx.amount)}
-              </p>
             </div>
-          ))}
-        </motion.div>
-      )}
+         </FintechCard>
 
-      {/* SUBSCRIPTIONS TAB */}
-      {activeTab === 'subscriptions' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {subscriptions.map((sub, i) => (
-            <motion.div key={sub.id}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-              className="glass card-lift flex items-center gap-4 p-5 rounded-3xl">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-                style={{ background: sub.status === 'overdue' ? '#FEF2F2' : 'var(--surface-hover)' }}>
-                {sub.icon}
-              </div>
-              <div className="flex-1">
-                <p className="text-[13px] font-semibold" style={{ color: 'var(--fg)' }}>{sub.name}</p>
-                <p className="text-[11px]" style={{ color: 'var(--muted)' }}>{sub.provider} · {sub.frequency}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(sub.amount)}</p>
-                <span className="badge text-[10px]" style={{
-                  background: sub.status === 'overdue' ? '#FEF2F2' : sub.status === 'active' ? '#F0FDF4' : 'var(--surface-hover)',
-                  color: sub.status === 'overdue' ? 'var(--danger)' : sub.status === 'active' ? 'var(--success)' : 'var(--muted)',
-                }}>
-                  {sub.status === 'overdue' ? '⚠ Overdue' : sub.status === 'active' ? '✓ Active' : 'Paused'}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+         <FintechCard className="p-16 flex items-center gap-10 bg-white shadow-xl">
+            <RadialGauge percentage={78} />
+            <div className="flex-1 space-y-5 pl-4">
+               <div>
+                 <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none mb-2">Excellent</h4>
+                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Efficiency Status</p>
+               </div>
+               <p className="text-xs font-bold text-gray-400 leading-relaxed pr-6">Household capital velocity is within **Elite Parametric Margins**.</p>
+            </div>
+         </FintechCard>
 
-      {/* MEAL PLANS TAB */}
-      {activeTab === 'meals' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {mealPlans.map((plan, i) => (
-            <motion.div key={plan.day}
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
-              className="glass card-lift rounded-3xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar size={15} style={{ color: 'var(--primary)' }} />
-                <p className="text-[13px] font-bold" style={{ color: 'var(--fg)' }}>{plan.day}</p>
-              </div>
-              <div className="space-y-2">
-                <div className="flex gap-2 items-start"><span className="text-xs">🌅</span><div><p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>Breakfast</p><p className="text-[12px] font-medium" style={{ color: 'var(--fg)' }}>{plan.breakfast}</p></div></div>
-                <div className="flex gap-2 items-start"><span className="text-xs">🍛</span><div><p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>Lunch</p><p className="text-[12px] font-medium" style={{ color: 'var(--fg)' }}>{plan.lunch}</p></div></div>
-                <div className="flex gap-2 items-start"><span className="text-xs">🌙</span><div><p className="text-[10px] font-semibold" style={{ color: 'var(--muted)' }}>Dinner</p><p className="text-[12px] font-medium" style={{ color: 'var(--fg)' }}>{plan.dinner}</p></div></div>
-              </div>
-              {plan.estimatedCost && (
-                <p className="text-[11px] font-semibold mt-3 pt-2" style={{ borderTop: '1px solid var(--border-color)', color: 'var(--primary)' }}>
-                  Est. Cost: {formatPrice(plan.estimatedCost)}
-                </p>
-              )}
+         <div className="grid grid-rows-2 gap-8">
+            <motion.div whileHover={{ x: 12 }} className="bg-black p-8 rounded-[40px] text-white flex items-center justify-between px-12 group cursor-pointer shadow-3xl">
+               <div className="flex items-center gap-8">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-[#82C341] shadow-xl group-hover:scale-110 transition-transform">
+                     <Download size={30} />
+                   </div>
+                  <span className="text-[11px] font-[1000] uppercase tracking-[0.4em]">Export Archive</span>
+               </div>
+               <ChevronRight size={24} className="text-gray-600 group-hover:translate-x-4 transition-transform" />
             </motion.div>
-          ))}
-        </div>
-      )}
+            <motion.div whileHover={{ x: -12 }} className="bg-white border border-gray-100 p-8 rounded-[40px] flex items-center justify-between px-12 group cursor-pointer shadow-2xl">
+               <div className="flex items-center gap-8">
+                  <div className="w-14 h-14 rounded-2xl bg-[#F8FAFC] flex items-center justify-center text-black shadow-xl group-hover:scale-110 transition-transform">
+                     <Zap size={30} />
+                   </div>
+                  <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-black">Active Synch</span>
+               </div>
+               <div className="w-4 h-4 rounded-full bg-green-500 shadow-2xl shadow-green-500/50 animate-pulse" />
+            </motion.div>
+         </div>
+      </div>
+
+      {/* ALLOCATION / BAR CHART SECTIONS - SYNCED TO BLACK/WHITE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-8 px-4">
+         <FintechCard className="lg:col-span-4 p-16 bg-white">
+            <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.5em] mb-14 flex items-center gap-5 pl-2">
+               <PieChart size={20} className="text-black" /> Resource Split
+            </h3>
+            <div className="space-y-12 pr-6 pl-2">
+               {categorySpending.slice(0, 4).map((cat, i) => (
+                 <div key={cat.category} className="space-y-5">
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.4em]">
+                       <span className="text-gray-400 group-hover:text-black transition-colors">{cat.category}</span>
+                       <span className="text-black font-[1000]">{formatPrice(cat.amount)}</span>
+                    </div>
+                    <div className="relative w-full h-3.5 bg-[#F8FAFC] rounded-full overflow-hidden shadow-inner p-0.5 border border-gray-50">
+                       <motion.div 
+                          initial={{ width: 0 }} whileInView={{ width: `${(cat.amount / 5000) * 100}%` }}
+                          transition={{ duration: 1.2, delay: i * 0.1 }}
+                          className="h-full bg-black rounded-full shadow-2xl relative"
+                       />
+                    </div>
+                 </div>
+               ))}
+            </div>
+         </FintechCard>
+
+         <FintechCard className="lg:col-span-8 p-16 bg-white">
+            <div className="flex justify-between items-start mb-20 pl-4">
+               <div>
+                  <h3 className="text-5xl font-[1000] text-black tracking-[-0.04em] leading-none mb-4">Flow Intensity</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em]">Real-Time Sequence Monitoring</p>
+               </div>
+               <div className="flex gap-4">
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+                    <div key={d} className="w-12 h-12 rounded-2xl bg-[#F8FAFC] border border-gray-100 flex items-center justify-center text-xs font-black text-black shadow-sm">{d}</div>
+                  ))}
+               </div>
+            </div>
+            <BarChart data={dailySpending} />
+         </FintechCard>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-8 px-4">
+         <motion.div 
+            whileHover={{ scale: 0.99 }}
+            className="lg:col-span-7 bg-black text-white p-16 rounded-[72px] shadow-3xl relative overflow-hidden group border-2 border-white/5"
+         >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row gap-14 pl-4 pr-10">
+               <div className="w-28 h-28 rounded-[36px] bg-white/10 flex items-center justify-center text-[#82C341] border border-white/5 shadow-3xl flex-shrink-0 animate-float">
+                  <Lightbulb size={56} />
+               </div>
+               <div className="space-y-8 flex-grow pr-10">
+                  <span className="text-[11px] font-black text-[#82C341] uppercase tracking-[0.6em] mb-4 inline-block">Asset Protocol Update</span>
+                  <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight opacity-90 uppercase">Switch to Vault Bundles for 15% Savings.</h4>
+                  <p className="text-gray-400 text-lg font-bold leading-relaxed opacity-70">Optimization logic detected repeatable transaction patterns in 12 recurring assets.</p>
+                  <button className="flex items-center gap-6 mt-14 bg-white text-black px-12 py-6 rounded-[24px] text-[11px] font-[1000] uppercase tracking-[0.3em] hover:bg-[#82C341] transition-all transform active:scale-95 group shadow-3xl">
+                     Initiate Patch <ArrowRight size={20} className="group-hover:translate-x-4 transition-transform" />
+                  </button>
+               </div>
+            </div>
+         </motion.div>
+
+         <FintechCard className="lg:col-span-5 p-16 flex flex-col items-center justify-center bg-white">
+            <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.5em] mb-16 self-start pl-4">Target Velocity</h3>
+            <div className="flex flex-col items-center justify-center space-y-16 w-full">
+               <RadialGauge percentage={85} label="Wealth Target" />
+               <div className="text-center pb-8">
+                  <h5 className="text-4xl font-[1000] text-black tracking-[-0.05em] mb-4 uppercase">₹12,750 Saved</h5>
+                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.5em] opacity-40">Next Protocol: ₹15,000</p>
+               </div>
+            </div>
+         </FintechCard>
+      </div>
+
+      {/* RECENT FLOW - PURE BLACK TEXT SYNC */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-24 px-8">
+         <div className="lg:col-span-8 space-y-14">
+             <div className="flex justify-between items-center px-4 pl-8 border-l-8 border-black">
+                <h3 className="text-4xl font-[1000] text-black tracking-[-0.05em] uppercase">Flow Record</h3>
+                <button className="text-[10px] font-black uppercase tracking-widest bg-[#F8FAFC] border border-gray-100 px-10 py-5 rounded-2xl hover:bg-black hover:text-white transition-all text-black">Full Archive</button>
+             </div>
+             <div className="bg-white rounded-[72px] border border-gray-100 shadow-3xl overflow-hidden p-4">
+                {transactions.slice(0, 5).map(tx => (
+                   <div key={tx.id} className="flex items-center justify-between p-12 pl-14 hover:bg-[#F8FAFC] transition-all border-b border-gray-50 last:border-0 group cursor-pointer active:scale-98 rounded-[48px]">
+                      <div className="flex items-center gap-12 pl-4">
+                         <div className={`w-18 h-18 rounded-3xl flex items-center justify-center text-2xl shadow-inner ${tx.type === 'credit' ? 'bg-green-500/10 text-green-500' : 'bg-[#F8FAFC] text-black border border-gray-50'}`}>
+                            {tx.type === 'credit' ? <ArrowDownLeft size={32} /> : <TrendingDown size={32} />}
+                         </div>
+                         <div className="pl-2">
+                            <p className="text-2xl font-[1000] text-black tracking-tighter leading-none mb-3 uppercase group-hover:translate-x-4 transition-transform">{tx.description}</p>
+                            <p className="text-[11px] font-[1000] text-gray-300 uppercase tracking-[0.4em]">{tx.category} • {tx.date}</p>
+                         </div>
+                      </div>
+                      <div className="text-right pr-14">
+                         <p className={`text-4xl font-[1000] tracking-[-0.06em] ${tx.type === 'credit' ? 'text-green-500' : 'text-black'}`}>
+                            {tx.type === 'credit' ? '+' : '-'}{formatPrice(tx.amount)}
+                         </p>
+                      </div>
+                   </div>
+                ))}
+             </div>
+         </div>
+
+         <div className="lg:col-span-4 space-y-16">
+            <FintechCard className="p-16 bg-white">
+               <div className="flex items-center gap-8 mb-14 border-b border-gray-50 pb-10 pl-2">
+                  <div className="w-18 h-18 rounded-3xl bg-black text-[#82C341] flex items-center justify-center shadow-2xl"><Calendar size={36} /></div>
+                  <div>
+                    <h4 className="text-3xl font-[1000] text-black tracking-tighter uppercase leading-none mb-2">Subs</h4>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.4em]">Renewal Log</p>
+                  </div>
+               </div>
+               <div className="space-y-10 pr-6 pl-2">
+                  {subscriptions.slice(0, 4).map(sub => (
+                    <div key={sub.id} className="flex items-center justify-between group">
+                       <div className="flex items-center gap-6">
+                          <span className="text-3xl w-14 h-14 bg-[#F8FAFC] border border-gray-50 rounded-2xl flex items-center justify-center grayscale group-hover:grayscale-0 transition-all shadow-sm">{sub.icon}</span>
+                          <span className="text-[12px] font-[1000] text-gray-800 uppercase tracking-widest">{sub.name}</span>
+                       </div>
+                       <span className="text-lg font-black text-black">{formatPrice(sub.amount)}</span>
+                    </div>
+                  ))}
+               </div>
+               <button className="w-full mt-16 py-6 bg-black text-white rounded-3xl text-[11px] font-[1000] uppercase tracking-[0.4em] hover:bg-[#82C341] transition-all shadow-3xl">Renewals Console</button>
+            </FintechCard>
+
+            <motion.div whileHover={{ scale: 1.02 }} className="p-14 pl-14 bg-red-600 rounded-[72px] text-white shadow-[0_40px_80px_rgba(220,38,38,0.3)] relative overflow-hidden group">
+               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+               <div className="relative z-10 flex items-center justify-between mb-10 pr-6">
+                  <span className="bg-black text-white px-6 py-2 rounded-2xl text-[10px] font-black tracking-[0.6em] uppercase shadow-2xl">Lethal Alert</span>
+                  <Bell size={32} className="animate-float" />
+               </div>
+               <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight relative z-10 pr-8 uppercase">Capital Overflow: Snacks.</h4>
+               <p className="text-white/80 text-base font-black mt-6 relative z-10 pr-6 leading-relaxed opacity-90">System halt recommended for 'Luxury Calories' until next cycle.</p>
+            </motion.div>
+         </div>
+      </section>
+
+      {/* FLOAT CONSOLE SYNC */}
+      <div className="fixed bottom-12 right-12 z-[100] flex flex-col gap-8 items-end">
+         <motion.button 
+            whileHover={{ scale: 1.15, rotate: 10 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIsVoiceActive(!isVoiceActive)}
+            className={`w-20 h-20 rounded-[32px] flex items-center justify-center shadow-4xl text-white transition-all transform ${isVoiceActive ? 'bg-red-500 scale-125' : 'bg-black'}`}
+         >
+            {isVoiceActive ? <X size={34} /> : <Mic size={34} />}
+         </motion.button>
+         
+         <motion.button 
+            whileHover={{ scale: 1.15, rotate: -10 }}
+            whileTap={{ scale: 0.9 }}
+            className="w-24 h-24 rounded-[40px] bg-[#82C341] text-white flex items-center justify-center shadow-[0_40px_80px_rgba(130,195,65,0.4)] group relative overflow-hidden"
+         >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+            <Plus size={48} className="relative z-10" />
+         </motion.button>
+      </div>
     </div>
   );
 }
