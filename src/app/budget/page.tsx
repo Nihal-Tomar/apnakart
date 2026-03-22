@@ -58,7 +58,7 @@ export default function BudgetPage() {
            </div>
         </div>
 
-        {/* Professional Navigation Hub */}
+        {/* Global Navigation Hub */}
         <div className="flex items-center gap-6">
            <ThemeToggle />
            <div className="flex bg-[#F8FAFC] p-2.5 rounded-[32px] border border-gray-100 h-20 items-center px-6 shadow-[0_20px_40px_rgba(0,0,0,0.03)] backdrop-blur-xl">
@@ -79,18 +79,17 @@ export default function BudgetPage() {
         </div>
       </motion.div>
 
-      {/* ===== ELITE PURE BLACK/WHITE GRID ===== */}
+      {/* ===== ELITE GRID: ALL CARDS WHITE ===== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 mt-16 px-4">
          
-         {/* 1. BALANCE - PURE BLACK TEXT */}
          <FintechCard className="p-16 bg-white">
             <div className="flex justify-between items-start mb-14 pl-2">
                <div className="w-16 h-16 rounded-[24px] bg-black text-[#82C341] flex items-center justify-center shadow-3xl">
                   <Wallet size={30} />
                </div>
                <div className="flex gap-3">
-                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all"><DownloadCloud size={20} /></button>
-                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all"><Share2 size={20} /></button>
+                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all text-black"><DownloadCloud size={20} /></button>
+                 <button className="p-4 bg-[#F8FAFC] rounded-2xl hover:bg-black hover:text-white transition-all text-black"><Share2 size={20} /></button>
                </div>
             </div>
             <div className="pl-2">
@@ -105,30 +104,30 @@ export default function BudgetPage() {
             </div>
          </FintechCard>
 
-         <FintechCard className="p-16 flex items-center gap-10 bg-white shadow-xl">
+         <FintechCard className="p-16 flex items-center gap-10 bg-white">
             <RadialGauge percentage={78} />
             <div className="flex-1 space-y-5 pl-4">
                <div>
                  <h4 className="text-3xl font-[1000] text-black tracking-tighter leading-none mb-2">Excellent</h4>
                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Efficiency Status</p>
                </div>
-               <p className="text-xs font-bold text-gray-400 leading-relaxed pr-6">Household capital velocity is within **Elite Parametric Margins**.</p>
+               <p className="text-xs font-bold text-gray-400 leading-relaxed pr-6">Household capital velocity is within <span className="text-black font-black">Elite Parametric Margins</span>.</p>
             </div>
          </FintechCard>
 
          <div className="grid grid-rows-2 gap-8">
-            <motion.div whileHover={{ x: 12 }} className="bg-black p-8 rounded-[40px] text-white flex items-center justify-between px-12 group cursor-pointer shadow-3xl">
+            <motion.div whileHover={{ x: 12 }} className="bg-white border border-black p-8 rounded-[40px] text-black flex items-center justify-between px-12 group cursor-pointer shadow-3xl">
                <div className="flex items-center gap-8">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-[#82C341] shadow-xl group-hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 rounded-2xl bg-black text-[#82C341] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform">
                      <Download size={30} />
                    </div>
                   <span className="text-[11px] font-[1000] uppercase tracking-[0.4em]">Export Archive</span>
                </div>
-               <ChevronRight size={24} className="text-gray-600 group-hover:translate-x-4 transition-transform" />
+               <ChevronRight size={24} className="text-gray-400 group-hover:translate-x-4 transition-transform group-hover:text-black" />
             </motion.div>
             <motion.div whileHover={{ x: -12 }} className="bg-white border border-gray-100 p-8 rounded-[40px] flex items-center justify-between px-12 group cursor-pointer shadow-2xl">
                <div className="flex items-center gap-8">
-                  <div className="w-14 h-14 rounded-2xl bg-[#F8FAFC] flex items-center justify-center text-black shadow-xl group-hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 rounded-2xl bg-[#F8FAFC] flex items-center justify-center text-black shadow-xl group-hover:scale-110 transition-transform border border-gray-100">
                      <Zap size={30} />
                    </div>
                   <span className="text-[11px] font-[1000] uppercase tracking-[0.4em] text-black">Active Synch</span>
@@ -138,7 +137,7 @@ export default function BudgetPage() {
          </div>
       </div>
 
-      {/* ALLOCATION / BAR CHART SECTIONS - SYNCED TO BLACK/WHITE */}
+      {/* ALLOCATION / TRENDS - SYNCED TO PURE WHITE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-8 px-4">
          <FintechCard className="lg:col-span-4 p-16 bg-white">
             <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.5em] mb-14 flex items-center gap-5 pl-2">
@@ -182,18 +181,18 @@ export default function BudgetPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-8 px-4">
          <motion.div 
             whileHover={{ scale: 0.99 }}
-            className="lg:col-span-7 bg-black text-white p-16 rounded-[72px] shadow-3xl relative overflow-hidden group border-2 border-white/5"
+            className="lg:col-span-7 bg-white text-black p-16 rounded-[72px] shadow-3xl relative overflow-hidden group border-4 border-black"
          >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#82C341]/5 to-transparent pointer-events-none" />
             <div className="relative z-10 flex flex-col md:flex-row gap-14 pl-4 pr-10">
-               <div className="w-28 h-28 rounded-[36px] bg-white/10 flex items-center justify-center text-[#82C341] border border-white/5 shadow-3xl flex-shrink-0 animate-float">
+               <div className="w-28 h-28 rounded-[36px] bg-black text-[#82C341] flex items-center justify-center shadow-3xl flex-shrink-0 animate-float">
                   <Lightbulb size={56} />
                </div>
                <div className="space-y-8 flex-grow pr-10">
                   <span className="text-[11px] font-black text-[#82C341] uppercase tracking-[0.6em] mb-4 inline-block">Asset Protocol Update</span>
-                  <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight opacity-90 uppercase">Switch to Vault Bundles for 15% Savings.</h4>
+                  <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight uppercase">Switch to Vault Bundles for 15% Savings.</h4>
                   <p className="text-gray-400 text-lg font-bold leading-relaxed opacity-70">Optimization logic detected repeatable transaction patterns in 12 recurring assets.</p>
-                  <button className="flex items-center gap-6 mt-14 bg-white text-black px-12 py-6 rounded-[24px] text-[11px] font-[1000] uppercase tracking-[0.3em] hover:bg-[#82C341] transition-all transform active:scale-95 group shadow-3xl">
+                  <button className="flex items-center gap-6 mt-14 bg-black text-white px-12 py-6 rounded-[24px] text-[11px] font-[1000] uppercase tracking-[0.3em] hover:bg-[#82C341] transition-all transform active:scale-95 group shadow-3xl">
                      Initiate Patch <ArrowRight size={20} className="group-hover:translate-x-4 transition-transform" />
                   </button>
                </div>
@@ -212,7 +211,7 @@ export default function BudgetPage() {
          </FintechCard>
       </div>
 
-      {/* RECENT FLOW - PURE BLACK TEXT SYNC */}
+      {/* RECENT RECORD SYNC */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-16 mt-24 px-8">
          <div className="lg:col-span-8 space-y-14">
              <div className="flex justify-between items-center px-4 pl-8 border-l-8 border-black">
@@ -264,14 +263,13 @@ export default function BudgetPage() {
                <button className="w-full mt-16 py-6 bg-black text-white rounded-3xl text-[11px] font-[1000] uppercase tracking-[0.4em] hover:bg-[#82C341] transition-all shadow-3xl">Renewals Console</button>
             </FintechCard>
 
-            <motion.div whileHover={{ scale: 1.02 }} className="p-14 pl-14 bg-red-600 rounded-[72px] text-white shadow-[0_40px_80px_rgba(220,38,38,0.3)] relative overflow-hidden group">
-               <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+            <motion.div whileHover={{ scale: 1.02 }} className="p-14 pl-14 bg-white border-8 border-red-600 rounded-[72px] text-black shadow-3xl relative overflow-hidden group">
                <div className="relative z-10 flex items-center justify-between mb-10 pr-6">
-                  <span className="bg-black text-white px-6 py-2 rounded-2xl text-[10px] font-black tracking-[0.6em] uppercase shadow-2xl">Lethal Alert</span>
-                  <Bell size={32} className="animate-float" />
+                  <span className="bg-red-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black tracking-[0.6em] uppercase shadow-2xl">Lethal Alert</span>
+                  <Bell size={32} className="text-red-600 animate-float" />
                </div>
-               <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight relative z-10 pr-8 uppercase">Capital Overflow: Snacks.</h4>
-               <p className="text-white/80 text-base font-black mt-6 relative z-10 pr-6 leading-relaxed opacity-90">System halt recommended for 'Luxury Calories' until next cycle.</p>
+               <h4 className="text-4xl font-[1000] tracking-[-0.05em] leading-tight relative z-10 pr-8 uppercase text-red-600">Capital Overflow: Snacks.</h4>
+               <p className="text-gray-900 text-base font-black mt-6 relative z-10 pr-6 leading-relaxed opacity-90">System halt recommended for 'Luxury Calories' until next cycle.</p>
             </motion.div>
          </div>
       </section>

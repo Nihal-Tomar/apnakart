@@ -15,7 +15,7 @@ export default function RadialGauge({ percentage, label = 'Health' }: { percenta
         <motion.circle 
           cx="64" cy="64" r={radius} fill="transparent" stroke="currentColor" strokeWidth="8" 
           strokeDasharray={dashArray} initial={{ strokeDashoffset: dashArray }} animate={{ strokeDashoffset: dashOffset }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          transition={{ duration: 1.5, ease: "easeOut" as const }}
           className="text-[var(--primary)]" strokeLinecap="round"
         />
       </svg>

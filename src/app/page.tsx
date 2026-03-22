@@ -16,7 +16,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1, y: 0,
-    transition: { duration: 0.25, ease: 'easeOut' } // Fast snappy entry
+    transition: { duration: 0.25, ease: 'easeOut' as const } // Fast snappy entry
   },
 };
 
@@ -24,7 +24,7 @@ const scaleIn = {
   hidden: { opacity: 0, scale: 0.98 },
   visible: {
     opacity: 1, scale: 1,
-    transition: { duration: 0.2, ease: 'easeOut' }
+    transition: { duration: 0.2, ease: 'easeOut' as const }
   },
 };
 

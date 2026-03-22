@@ -25,7 +25,7 @@ export default function LineChart({ data, labels }: { data: number[]; labels: st
           </linearGradient>
         </defs>
         <motion.path 
-          initial={{ pathLength: 0 }} whileInView={{ pathLength: 1 }} transition={{ duration: 2, ease: "easeInOut" }}
+          initial={{ pathLength: 0 }} whileInView={{ pathLength: 1 }} transition={{ duration: 2, ease: "easeInOut" as const }}
           d={curvePoints} fill="none" stroke="currentColor" strokeWidth="6" className="text-black dark:text-white" strokeLinecap="round"
         />
         <motion.path 
