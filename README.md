@@ -78,7 +78,3 @@ Try `APNA10` or `FIRST10` in the cart for 10% discount!
 | 💰 Budget | Tracks & optimizes spending |
 | 🛒 Shopping | Auto-builds smart carts |
 | ⚡ Execution | Finalizes actions & workflow |
-
-## License
-
-MIT
