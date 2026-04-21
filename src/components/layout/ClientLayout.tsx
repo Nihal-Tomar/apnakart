@@ -1,65 +1,91 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import Header from './Header';
 import { ThemeProvider, CartProvider } from '@/lib/context';
 import { ToastProvider } from '@/components/ui/Toast';
+import CartSidebar, { CartSidebarProvider } from '@/components/ui/CartSidebar';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <CartProvider>
         <ToastProvider>
-           <div className="flex flex-col min-h-screen w-full relative" style={{ background: 'var(--bg)' }}>
-              {/* Horizontal Header (Full Width - Stays centered with mx-auto if inside a container, but here it's stickied to top) */}
+          <CartSidebarProvider>
+            <div className="flex flex-col min-h-screen w-full relative" style={{ background: 'var(--bg)' }}>
               <Header />
+              <CartSidebar />
 
-              {/* MAIN CONTAINER: THIS WILL KEEP EVERYTHING CENTERED */}
               <div className="flex-1 w-full flex flex-col items-center">
-                 <main className="w-full max-w-7xl px-4 md:px-6 lg:px-10 py-10 md:py-16 page-fade-in relative z-10">
-                   {children}
-                 </main>
+                <main className="w-full max-w-7xl px-4 md:px-6 lg:px-8 py-6 md:py-10 page-fade-in relative z-10">
+                  {children}
+                </main>
               </div>
 
-              {/* Footer Section */}
-              <footer className="w-full mt-auto py-16 px-4 flex flex-col items-center border-t border-gray-100 bg-white" style={{ borderTop: '1px solid var(--border-color)' }}>
-                <div className="w-full max-w-7xl grid grid-cols-2 md:grid-cols-4 gap-12">
-                   <div>
-                    <h3 className="text-[14px] font-black uppercase mb-6 text-gray-900 tracking-widest">ApnaKart</h3>
-                    <p className="text-[13px] font-medium leading-relaxed text-gray-500">Smart shopping for your daily needs. Inspired by India, built for everyone.</p>
+              {/* Footer */}
+              <footer className="w-full mt-auto border-t" style={{ borderColor: 'var(--border-color)', background: 'var(--surface)' }}>
+                <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center text-white font-bold text-sm">A</div>
+                        <span className="text-base font-bold" style={{ color: 'var(--fg)' }}>ApnaKart</span>
+                      </div>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
+                        Smart shopping for your daily needs. Fresh groceries delivered in minutes.
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>Quick Links</h3>
+                      <ul className="space-y-2.5">
+                        {[
+                          { href: '/', label: 'Home' },
+                          { href: '/store', label: 'Store' },
+                          { href: '/budget', label: 'Budget Tracker' },
+                          { href: '/assistant', label: 'AI Assistant' },
+                        ].map(link => (
+                          <li key={link.href}>
+                            <Link href={link.href} className="text-sm transition-colors hover:text-[var(--primary)]" style={{ color: 'var(--fg)' }}>{link.label}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>Help & Support</h3>
+                      <ul className="space-y-2.5">
+                        {['Customer Care', 'How it Works', 'Return Policy', 'FAQs'].map(item => (
+                          <li key={item}>
+                            <Link href="#" className="text-sm transition-colors hover:text-[var(--primary)]" style={{ color: 'var(--fg)' }}>{item}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'var(--muted)' }}>Download App</h3>
+                      <p className="text-sm mb-4" style={{ color: 'var(--muted)' }}>Get the best experience on mobile.</p>
+                      <div className="flex flex-col gap-2">
+                        <div className="px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors" style={{ background: 'var(--bg)', border: '1px solid var(--border-color)', color: 'var(--fg)' }}>
+                          📱 App Store
+                        </div>
+                        <div className="px-4 py-2.5 rounded-lg text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors" style={{ background: 'var(--bg)', border: '1px solid var(--border-color)', color: 'var(--fg)' }}>
+                          🤖 Play Store
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-[10px] font-black uppercase mb-6 text-gray-400 tracking-widest">Quick Links</h3>
-                    <ul className="text-[13px] font-bold space-y-3" style={{ color: 'var(--fg)' }}>
-                      <li><a href="/" className="hover:text-[var(--primary)] transition-all flex items-center gap-2">Dashboard</a></li>
-                      <li><a href="/store" className="hover:text-[var(--primary)] transition-all flex items-center gap-2">Store</a></li>
-                      <li><a href="/budget" className="hover:text-[var(--primary)] transition-all flex items-center gap-2">Budget</a></li>
-                    </ul>
-                  </div>
-                   <div>
-                    <h3 className="text-[10px] font-black uppercase mb-6 text-gray-400 tracking-widest">Help & Support</h3>
-                    <ul className="text-[13px] font-bold space-y-3" style={{ color: 'var(--fg)' }}>
-                      <li><a href="#" className="hover:text-[var(--primary)] transition-all">Customer Care</a></li>
-                      <li><a href="#" className="hover:text-[var(--primary)] transition-all">How it works</a></li>
-                      <li><a href="#" className="hover:text-[var(--primary)] transition-all">Store Locator</a></li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="text-[10px] font-black uppercase mb-6 text-gray-400 tracking-widest">Connect</h3>
-                    <div className="flex gap-4">
-                      {['TW', 'IN', 'FB'].map(s => <span key={s} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-[10px] font-black cursor-pointer hover:bg-[var(--primary)] hover:text-white transition-all">{s}</span>)}
+                  <div className="mt-10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs" style={{ borderTop: '1px solid var(--border-color)', color: 'var(--muted)' }}>
+                    <p>© 2026 ApnaKart. All rights reserved.</p>
+                    <div className="flex gap-6">
+                      <span className="flex items-center gap-1.5">⚡ 45-min delivery</span>
+                      <span className="flex items-center gap-1.5">🔒 Secure payments</span>
+                      <span className="flex items-center gap-1.5">🔄 Easy returns</span>
                     </div>
                   </div>
                 </div>
-                <div className="w-full max-w-7xl pt-12 mt-12 flex flex-col md:flex-row justify-between items-center border-t border-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] gap-4">
-                   <p>© 2026 APNAKART INC. ALL RIGHTS RESERVED.</p>
-                   <div className="flex gap-8">
-                      <span>Express 45-Min Delivery</span>
-                      <span>100% Secure Transaction</span>
-                   </div>
-                </div>
               </footer>
-           </div>
+            </div>
+          </CartSidebarProvider>
         </ToastProvider>
       </CartProvider>
     </ThemeProvider>

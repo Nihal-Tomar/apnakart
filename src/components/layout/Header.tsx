@@ -1,206 +1,295 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Search, ShoppingCart, User, Bell, ChevronDown, MapPin, Phone, HelpCircle, Menu, X, LayoutDashboard, ShoppingBag, Wallet, Bot, Heart, Moon, Sun, ShoppingBasket } from 'lucide-react';
+import {
+  Search, ShoppingCart, MapPin, Menu, X,
+  LayoutDashboard, ShoppingBag, Wallet, Bot,
+  Moon, Sun, ChevronDown
+} from 'lucide-react';
 import { useCartContext, useTheme } from '@/lib/context';
 import { motion, AnimatePresence } from 'framer-motion';
+import { products } from '@/lib/data/products';
+import { formatPrice } from '@/lib/utils';
+import { useCartSidebar } from '@/components/ui/CartSidebar';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/store', label: 'Grocery Store', icon: ShoppingBag },
+  { href: '/', label: 'Home', icon: LayoutDashboard },
+  { href: '/store', label: 'Store', icon: ShoppingBag },
   { href: '/budget', label: 'Budget', icon: Wallet },
   { href: '/assistant', label: 'AI Assistant', icon: Bot },
 ];
 
 export default function Header() {
   const pathname = usePathname();
-  const { totalItems } = useCartContext();
+  const { totalItems, totalPrice } = useCartContext();
   const { theme, toggleTheme } = useTheme();
+  const { toggleCart } = useCartSidebar();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Scroll shadow
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const suggestions = debouncedQuery.length >= 2
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+        p.nameHindi?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+        p.category.toLowerCase().includes(debouncedQuery.toLowerCase())
+      ).slice(0, 5)
+    : [];
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white shadow-sm border-b border-gray-100 dark:bg-slate-900 dark:border-slate-800" style={{ borderBottom: '1px solid var(--border-color)' }}>
-        {/* Top Info Bar (Black Text) */}
-        <div className="hidden lg:block w-full text-[11px] font-black uppercase tracking-[0.2em] py-2 border-b border-gray-100" style={{ background: '#FFFFFF', color: '#000000' }}>
-          <div className="max-w-7xl mx-auto px-12 flex justify-between items-center h-4">
-            <div className="flex items-center gap-8">
-              <span className="flex items-center gap-2"><Phone size={12} /> +91 12345 67890</span>
-              <span className="flex items-center gap-2 cursor-pointer hover:text-[var(--primary)] transition-colors"><MapPin size={12} /> 560001, Bangalore <ChevronDown size={10} /></span>
-            </div>
-            <div className="flex items-center gap-8">
-              <Link href="/budget" className="hover:text-[var(--primary)] transition-all">Support</Link>
-              <Link href="/budget" className="hover:text-[var(--primary)] transition-all">My Rewards</Link>
-              <Link href="/budget" className="hover:text-[var(--primary)] transition-all">Track Order</Link>
-            </div>
-          </div>
-        </div>
+      <header
+        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+          scrolled ? 'shadow-sm border-b' : 'border-b border-transparent'
+        }`}
+        style={{
+          background: 'var(--header-bg)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderColor: scrolled ? 'var(--border-color)' : 'transparent',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          {/* Main Row */}
+          <div className="flex items-center justify-between h-16 md:h-[68px] gap-4">
 
-        {/* Branding & Search Row (Centered with mx-auto & px-12) */}
-        <div className="max-w-7xl mx-auto px-12 py-7 flex items-center justify-between gap-12">
-          {/* Logo (Black text branding) */}
-          <Link href="/" className="flex items-center gap-5 group flex-shrink-0">
-            <div className="w-14 h-14 rounded-2xl bg-[var(--primary)] flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-green-500/20 transition-transform group-hover:scale-110 active:scale-95">
-              A
-            </div>
-            <div className="hidden sm:block">
-              <h1 className="text-3xl font-black tracking-tighter text-black dark:text-white leading-none">Apna<span className="text-[var(--primary)]">Kart</span></h1>
-              <p className="text-[10px] font-black tracking-[0.3em] uppercase mt-1.5 text-gray-400">Pure Freshness</p>
-            </div>
-          </Link>
-
-          {/* Search bar (Main focus centered) */}
-          <div className="flex-1 max-w-2xl hidden md:block">
-            <div className="relative group items-center">
-              <input 
-                type="text" 
-                placeholder="Search premium products..." 
-                className="w-full pl-8 pr-16 py-4 rounded-2xl text-sm font-black transition-all focus:outline-none focus:ring-4 focus:ring-[var(--primary)]/10 shadow-sm placeholder:text-gray-300"
-                style={{ 
-                  background: '#F9F9F9', 
-                  border: '1px solid #E5E5E5', 
-                  color: '#000000' 
-                }}
-              />
-              <button className="absolute right-0 top-0 h-full px-6 rounded-r-2xl bg-black text-white hover:bg-[var(--primary)] transition-all flex items-center justify-center shadow-lg active:scale-95">
-                <Search size={22} />
+            {/* Logo + Delivery */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Link href="/" className="flex items-center gap-2.5 group">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center text-white font-bold text-lg shadow-md shadow-green-500/20 group-hover:shadow-green-500/30 transition-all">
+                  A
+                </div>
+                <h1 className="hidden sm:block text-lg font-bold tracking-tight leading-none" style={{ color: 'var(--fg)' }}>
+                  Apna<span className="text-[var(--primary)]">Kart</span>
+                </h1>
+              </Link>
+              <button className="hidden md:flex items-center gap-1 pl-3 ml-1 border-l transition-colors hover:text-[var(--primary)]" style={{ borderColor: 'var(--border-color)', color: 'var(--muted)' }}>
+                <MapPin size={13} className="text-[var(--primary)]" />
+                <span className="text-xs font-medium">Bangalore</span>
+                <ChevronDown size={11} />
               </button>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4 sm:gap-8 flex-shrink-0">
-            {/* Dark mode button - Darkened color */}
-            <button
-              onClick={toggleTheme}
-              className="p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 transition-all active:scale-95 text-black dark:text-white"
-            >
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            {/* Search — hidden on mobile */}
+            <div className="flex-1 max-w-xl hidden md:block" ref={searchRef}>
+              <div className="relative">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search for groceries, fruits, dairy..."
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => setShowSuggestions(true)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-medium transition-all focus:ring-2 focus:ring-[var(--primary)]/20"
+                  style={{
+                    background: theme === 'dark' ? 'var(--surface)' : '#F1F5F9',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--fg)',
+                  }}
+                />
 
-            {/* Profile Dropdown - Black text */}
-            <Link href="/login" className="hidden lg:flex items-center gap-4 py-1 pr-5 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all border border-transparent hover:border-gray-100">
-               <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-black dark:text-white font-black text-sm">NS</div>
-               <div className="text-left">
-                  <p className="text-sm font-black text-black dark:text-white leading-none">Nihal Tomar</p>
-                  <p className="text-[10px] font-black text-gray-400 mt-1 uppercase tracking-widest">Premium User</p>
-               </div>
-            </Link>
-
-            {/* Icons */}
-            <div className="flex items-center gap-2 sm:gap-4">
-               <button className="relative p-3.5 rounded-2xl bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 transition-all hidden sm:flex items-center justify-center text-black dark:text-white">
-                 <Heart size={20} />
-               </button>
-               
-               <Link href="/cart" className="relative h-14 flex items-center gap-4 px-8 rounded-[20px] bg-black text-white transition-all shadow-2xl hover:bg-gray-900 active:scale-95">
-                 <ShoppingCart size={20} className="text-[var(--primary)]" />
-                 <div className="hidden sm:block text-left relative z-10">
-                    <p className="text-[10px] leading-tight font-black opacity-50 uppercase tracking-[0.2em]">Bag Content</p>
-                    <p className="text-[14px] leading-tight font-black">{totalItems} Total</p>
-                 </div>
-                 {totalItems > 0 && (
-                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-black text-white lg:hidden">
-                     {totalItems}
-                   </span>
-                 )}
-               </Link>
-
-               {/* Mobile Menu */}
-               <button 
-                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                 className="lg:hidden p-4 bg-gray-50 dark:bg-slate-800 rounded-2xl text-black dark:text-white"
-               >
-                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-               </button>
+                {/* Search Suggestions */}
+                <AnimatePresence>
+                  {showSuggestions && suggestions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-full left-0 right-0 mt-2 rounded-xl overflow-hidden shadow-xl z-50"
+                      style={{ background: 'var(--surface)', border: '1px solid var(--border-color)' }}
+                    >
+                      {suggestions.map(product => (
+                        <Link
+                          key={product.id}
+                          href="/store"
+                          onClick={() => { setShowSuggestions(false); setSearchQuery(''); }}
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--primary-light)] transition-colors"
+                        >
+                          <div className="relative w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            <Image
+                              src={product.image}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              sizes="36px"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>{product.name}</p>
+                            <p className="text-xs" style={{ color: 'var(--muted)' }}>{product.unit}</p>
+                          </div>
+                          <span className="text-sm font-semibold text-[var(--primary)] flex-shrink-0">{formatPrice(product.price)}</span>
+                        </Link>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Bottom Menu Bar (Perfect center + Black text) */}
-        <div className="hidden lg:block w-full border-t border-gray-100 px-12 py-3 bg-white dark:bg-slate-900">
-          <div className="max-w-7xl mx-auto flex items-center gap-16 h-10">
-            {/* Category */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="flex items-center gap-4 px-8 h-12 rounded-xl bg-black text-white font-black text-[12px] uppercase tracking-[0.2em] transition-all hover:bg-gray-900 active:scale-95"
+            {/* Right Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl transition-colors hover:bg-[var(--border-color)]/40"
+                style={{ color: 'var(--fg)' }}
+                aria-label="Toggle theme"
               >
-                Categories <ChevronDown size={14} className={`transition-transform duration-300 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
               </button>
-              
-              <AnimatePresence>
-                {isCategoryOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                    className="absolute top-full left-0 mt-4 w-80 bg-white dark:bg-slate-800 rounded-3xl py-6 shadow-[0_32px_128px_rgba(0,0,0,0.2)] z-50 overflow-hidden border border-gray-50 dark:border-slate-800"
-                  >
-                    {['Fruits & Vegetables', 'Dairy & Bakery', 'Grains & Essentials', 'Snacks & Drinks', 'Household needs'].map((cat, i) => (
-                      <Link 
-                        key={cat} href="/store"
-                        className="flex items-center justify-between px-8 py-4 text-[14px] font-black text-black hover:bg-gray-50 hover:text-[var(--primary)] transition-all group"
-                        onClick={() => setIsCategoryOpen(false)}
-                      >
-                        {cat} <ChevronDown className="-rotate-90 opacity-20 group-hover:opacity-100 transition-all" size={12} />
-                      </Link>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
 
-            {/* Horizontal Nav Links - Black Text */}
-            <nav className="flex items-center gap-6 h-full">
-              {navItems.map((item) => {
+              {/* Cart Button — opens sidebar */}
+              <button
+                onClick={toggleCart}
+                className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-white"
+                style={{ background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' }}
+              >
+                <ShoppingCart size={18} />
+                <span className="hidden sm:inline text-sm font-semibold whitespace-nowrap">
+                  {totalItems > 0 ? formatPrice(totalPrice) : 'Cart'}
+                </span>
+                {totalItems > 0 && (
+                  <motion.span
+                    key={totalItems}
+                    initial={{ scale: 1.4 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white"
+                  >
+                    {totalItems}
+                  </motion.span>
+                )}
+              </button>
+
+              {/* Mobile Menu Toggle */}
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="lg:hidden p-2.5 rounded-xl transition-colors hover:bg-[var(--border-color)]/40"
+                style={{ color: 'var(--fg)' }}
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Nav */}
+          <nav className="hidden lg:flex items-center gap-0.5 pb-1.5">
+            {navItems.map(item => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive ? '' : 'hover:bg-[var(--border-color)]/30'
+                  }`}
+                  style={{ color: isActive ? 'var(--primary)' : 'var(--muted)' }}
+                >
+                  <item.icon size={15} />
+                  {item.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-pill"
+                      className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full bg-[var(--primary)]"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 top-16 z-40 lg:hidden"
+            style={{ background: 'var(--bg)' }}
+          >
+            <nav className="flex flex-col p-5 gap-1.5">
+              {navItems.map(item => {
                 const isActive = pathname === item.href;
                 return (
-                  <Link 
-                    key={item.href} href={item.href}
-                    className={`flex items-center gap-3 px-6 h-full text-[11px] font-black uppercase tracking-[0.3em] transition-all relative
-                      ${isActive ? 'text-[var(--primary)] shadow-sm' : 'text-black dark:text-gray-400 hover:text-[var(--primary)]'}`}
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all ${
+                      isActive ? 'bg-[var(--primary-light)]' : 'hover:bg-[var(--surface)]'
+                    }`}
+                    style={{ color: isActive ? 'var(--primary)' : 'var(--fg)' }}
                   >
-                    {isActive && <motion.div layoutId="nav-glow-black" className="absolute bottom-0 left-6 right-6 h-1.5 bg-[var(--primary)] rounded-full shadow-[0_4px_12px_var(--primary)]" />}
-                    <item.icon size={16} /> {item.label}
+                    <item.icon size={18} />
+                    {item.label}
                   </Link>
                 );
               })}
+
+              {/* Mobile Search */}
+              <div className="mt-3 relative">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search groceries..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--fg)',
+                  }}
+                />
+              </div>
+
+              {/* Mobile Cart */}
+              <button
+                onClick={() => { setIsMenuOpen(false); toggleCart(); }}
+                className="mt-2 w-full gradient-btn py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <ShoppingCart size={18} />
+                View Cart ({totalItems} items)
+              </button>
             </nav>
-
-            <div className="ml-auto flex items-center gap-4 h-full px-8 border-l border-gray-50 text-[10px] font-black uppercase text-red-600 tracking-[0.2em] animate-pulse">
-               ⚡ Order now for 15-min pickup
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Nav Overlay */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 top-[96px] z-40 bg-white dark:bg-slate-900 p-10 flex flex-col gap-12 lg:hidden"
-            >
-               <nav className="flex flex-col gap-8">
-                {navItems.map((item) => (
-                  <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)}
-                    className="flex justify-between items-center text-4xl font-black text-black dark:text-white tracking-tighter"
-                  >
-                    <span className="flex items-center gap-6"><item.icon size={32} /> {item.label}</span>
-                    <ChevronDown size={24} className="-rotate-90 text-[var(--primary)]" />
-                  </Link>
-                ))}
-              </nav>
-              <Link href="/cart" onClick={() => setIsMenuOpen(false)} className="bg-black text-white p-8 rounded-3xl flex items-center justify-center font-black text-2xl gap-5 shadow-2xl">
-                 <ShoppingCart size={28} /> My Bag ({totalItems})
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
-
-      {/* Category Drop Overlay */}
-      {isCategoryOpen && <div className="fixed inset-0 z-40 bg-black/5" onClick={() => setIsCategoryOpen(false)} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

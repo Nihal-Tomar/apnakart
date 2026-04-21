@@ -23,12 +23,43 @@ export function useToast() {
   return useContext(ToastContext);
 }
 
+const toastConfig: Record<ToastType, { icon: React.ReactNode; bg: string; border: string; iconColor: string; textColor: string }> = {
+  success: {
+    icon: <CheckCircle size={16} />,
+    bg: '#F0FDF4',
+    border: '#BBF7D0',
+    iconColor: '#22C55E',
+    textColor: '#166534',
+  },
+  error: {
+    icon: <AlertCircle size={16} />,
+    bg: '#FEF2F2',
+    border: '#FECACA',
+    iconColor: '#EF4444',
+    textColor: '#991B1B',
+  },
+  info: {
+    icon: <Info size={16} />,
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    iconColor: '#3B82F6',
+    textColor: '#1E40AF',
+  },
+  cart: {
+    icon: <ShoppingCart size={16} />,
+    bg: '#F0FDF4',
+    border: '#BBF7D0',
+    iconColor: '#22C55E',
+    textColor: '#166534',
+  },
+};
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((type: ToastType, message: string, duration = 3000) => {
-    const id = Date.now().toString() + Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, type, message, duration }]);
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts(prev => [...prev.slice(-4), { id, type, message, duration }]); // keep max 5
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, duration);
@@ -38,47 +69,48 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  const icons: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle size={18} />,
-    error: <AlertCircle size={18} />,
-    info: <Info size={18} />,
-    cart: <ShoppingCart size={18} />,
-  };
-
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    success: { bg: '#F0FDF4', border: '#BBF7D0', icon: '#22C55E' },
-    error: { bg: '#FEF2F2', border: '#FECACA', icon: '#EF4444' },
-    info: { bg: '#EEF2FF', border: '#C7D2FE', icon: '#4F46E5' },
-    cart: { bg: '#F0FDF4', border: '#BBF7D0', icon: '#22C55E' },
-  };
-
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
 
       {/* Toast Container */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 max-w-sm">
+      <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 w-72 max-w-[calc(100vw-2rem)]">
         <AnimatePresence mode="popLayout">
-          {toasts.map(toast => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 80, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg backdrop-blur-xl"
-              style={{
-                background: colors[toast.type].bg,
-                border: `1px solid ${colors[toast.type].border}`,
-              }}
-            >
-              <span style={{ color: colors[toast.type].icon }}>{icons[toast.type]}</span>
-              <p className="text-[13px] font-medium flex-1" style={{ color: '#0F172A' }}>{toast.message}</p>
-              <button onClick={() => removeToast(toast.id)} className="p-0.5 rounded-lg hover:bg-black/5 transition-colors">
-                <X size={14} style={{ color: '#64748B' }} />
-              </button>
-            </motion.div>
-          ))}
+          {toasts.map(toast => {
+            const config = toastConfig[toast.type];
+            return (
+              <motion.div
+                key={toast.id}
+                layout
+                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 40, scale: 0.95 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg"
+                style={{
+                  background: config.bg,
+                  border: `1px solid ${config.border}`,
+                }}
+              >
+                <span style={{ color: config.iconColor }} className="flex-shrink-0 mt-0.5">
+                  {config.icon}
+                </span>
+                <p
+                  className="text-sm font-medium flex-1 leading-snug"
+                  style={{ color: config.textColor }}
+                >
+                  {toast.message}
+                </p>
+                <button
+                  onClick={() => removeToast(toast.id)}
+                  className="p-0.5 rounded-md hover:opacity-70 transition-opacity flex-shrink-0"
+                  style={{ color: config.textColor }}
+                >
+                  <X size={14} />
+                </button>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
     </ToastContext.Provider>

@@ -18,12 +18,18 @@ const zeptoResponses: Record<string, string> = {
   "is everything fresh?": "🥦 **Quality Guarantee**: Absolutely! Our 'Farm-to-Fork' initiative ensures all vegetables are sourced within 24 hours of delivery. If you're not satisfied, we offer 100% money back.",
 };
 
-const plannerResponses = [
-  "Based on your weekly pattern, you usually buy milk and vegetables on Mondays. I've prepared a suggested list for you.",
-  "I notice you haven't ordered fruits this week. Adding seasonal fruits to your recommendations — mangoes and oranges are in season!",
-  `Here's your suggested meal plan for today:\n\n🌅 **Breakfast**: ${mealPlans[new Date().getDay()  === 0 ? 6 : new Date().getDay() - 1]?.breakfast || 'Poha with Chai'}\n🍛 **Lunch**: ${mealPlans[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.lunch || 'Dal Rice'}\n🌙 **Dinner**: ${mealPlans[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]?.dinner || 'Roti Sabzi'}`,
-  "Your pantry essentials are running low. I recommend restocking: Atta, Rice, Dal, and cooking oil this weekend.",
-];
+// Returns responses lazily — called only from handleSend() on the client,
+// so new Date() never executes during SSR.
+function getPlannerResponses(): string[] {
+  const dayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const plan = mealPlans[dayIndex];
+  return [
+    "Based on your weekly pattern, you usually buy milk and vegetables on Mondays. I've prepared a suggested list for you.",
+    "I notice you haven't ordered fruits this week. Adding seasonal fruits to your recommendations — mangoes and oranges are in season!",
+    `Here's your suggested meal plan for today:\n\n🌅 **Breakfast**: ${plan?.breakfast || 'Poha with Chai'}\n🍛 **Lunch**: ${plan?.lunch || 'Dal Rice'}\n🌙 **Dinner**: ${plan?.dinner || 'Roti Sabzi'}`,
+    "Your pantry essentials are running low. I recommend restocking: Atta, Rice, Dal, and cooking oil this weekend.",
+  ];
+}
 
 const budgetResponses = [
   "📊 **This month's spending**: ₹9,581 of ₹15,000 budget (63.9%)\n\nYou're on track! At this rate, you'll finish the month with ₹2,200 in savings.",
@@ -45,12 +51,17 @@ function getRandomResponse(responses: string[]): string {
   return responses[Math.floor(Math.random() * responses.length)];
 }
 
-export function getAgentResponse(query: string): AgentMessage {
+/**
+ * @param query   The user's message text.
+ * @param ts      A numeric timestamp captured on the client (Date.now()).
+ *                Passing it as a parameter prevents any date calls inside
+ *                this function from running during SSR.
+ */
+export function getAgentResponse(query: string, ts: number): AgentMessage {
   const lower = query.toLowerCase().trim();
   let agent: AgentMessage['agent'] = 'planner';
   let content = '';
 
-  // Check for Zepto-style predefined questions
   if (zeptoResponses[lower]) {
     agent = 'execution';
     content = zeptoResponses[lower];
@@ -65,14 +76,17 @@ export function getAgentResponse(query: string): AgentMessage {
     content = getRandomResponse(executionResponses);
   } else {
     agent = 'planner';
-    content = getRandomResponse(plannerResponses);
+    // getPlannerResponses() calls new Date() — safe here because
+    // getAgentResponse is only ever called inside handleSend (client event handler).
+    content = getRandomResponse(getPlannerResponses());
   }
 
   return {
-    id: Date.now().toString(),
+    id: ts.toString(),
     agent,
     content,
-    timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+    // Format the timestamp from the stable ts value the caller already captured.
+    timestamp: new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     type: 'text',
   };
 }

@@ -15,11 +15,27 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function getGreeting(): string {
-  const hour = new Date().getHours();
+/**
+ * Returns a greeting string based on the supplied hour.
+ * Accepts `hour` as a parameter so callers decide when to capture
+ * `new Date().getHours()` — always client-side inside useEffect.
+ */
+export function getGreetingForHour(hour: number): string {
   if (hour < 12) return 'Good Morning';
   if (hour < 17) return 'Good Afternoon';
   return 'Good Evening';
+}
+
+/**
+ * Formats a JS timestamp (number) into a locale time string.
+ * Always call this client-side so the output is consistent
+ * between server render (where it should never run) and the client.
+ */
+export function formatTimestamp(ts: number): string {
+  return new Date(ts).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function cn(...classes: (string | undefined | null | false)[]): string {

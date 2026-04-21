@@ -1,197 +1,335 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import type { Product } from '@/types';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingCart, Star, Plus, Minus, Filter, ChevronDown, CheckCircle, Sparkles, SlidersHorizontal, ArrowRight, Heart, Tag, ImageOff } from 'lucide-react';
-import { products } from '@/lib/data/products';
+import { Search, Plus, Minus, Filter, Star, ChevronDown, Sparkles, SlidersHorizontal, X } from 'lucide-react';
+import { products, categories } from '@/lib/data/products';
 import { formatPrice } from '@/lib/utils';
 import { useCartContext } from '@/lib/context';
 import { getRecommendedProducts } from '@/lib/agents';
 import { useToast } from '@/components/ui/Toast';
-
-// SNAPPY ANIMATIONS (Reduced durations to 0.2s for snappy page switching)
-const fadeUp = {
-   hidden: { opacity: 0, y: 12 },
-   visible: {
-      opacity: 1, y: 0,
-      transition: { duration: 0.25, ease: 'easeOut' as const }
-   },
-};
+import { useCartSidebar } from '@/components/ui/CartSidebar';
+import { SkeletonProductCard } from '@/components/ui/Skeletons';
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400";
-const categories = ['All', 'Fruits & Vegetables', 'Dairy & Bakery', 'Grains & Essentials', 'Snacks & Drinks', 'Household Care'];
+
+/** Wrapper that falls back to FALLBACK_IMG if the Unsplash URL fails to load. */
+function ProductImage({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
+  const [imgSrc, setImgSrc] = useState(
+    src.startsWith('http') ? src : FALLBACK_IMG
+  );
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      fill
+      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      sizes={sizes}
+      onError={() => setImgSrc(FALLBACK_IMG)}
+    />
+  );
+}
+
+const sortOptions = ['Recommended', 'Price: Low to High', 'Price: High to Low', 'Rating'];
 
 export default function StorePage() {
-   const { addItem, items, updateQuantity } = useCartContext();
-   const { addToast } = useToast();
-   const [selectedCategory, setSelectedCategory] = useState('All');
-   const [searchQuery, setSearchQuery] = useState('');
-   const [sortBy, setSortBy] = useState('Recommended');
+  const { addItem, items, updateQuantity } = useCartContext();
+  const { addToast } = useToast();
+  const { openCart } = useCartSidebar();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState('Recommended');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-   const recommended = getRecommendedProducts();
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
-   const filteredProducts = products.filter(p => {
-      const matchesCategory = selectedCategory === 'All' || p.category.toLowerCase().includes(selectedCategory.split(' ')[0].toLowerCase());
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         p.nameHindi?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const recommended = useMemo(() => getRecommendedProducts(), []);
+
+  const filteredProducts = useMemo(() => {
+    let result = products.filter(p => {
+      const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+      const matchesSearch = debouncedSearch === '' ||
+        p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.nameHindi?.toLowerCase().includes(debouncedSearch.toLowerCase());
       return matchesCategory && matchesSearch;
-   });
+    });
 
-   const getQuantity = (id: string) => {
-      return items.find(item => item.product.id === id)?.quantity || 0;
-   };
+    switch (sortBy) {
+      case 'Price: Low to High':
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case 'Price: High to Low':
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case 'Rating':
+        result.sort((a, b) => b.rating - a.rating);
+        break;
+    }
 
-   const handleAddToCart = (product: any) => {
-      addItem(product);
-      addToast('cart', `${product.name} added to cart! 🛒`);
-   };
+    return result;
+  }, [selectedCategory, debouncedSearch, sortBy]);
 
-   return (
-      <div className="space-y-24 mb-24 page-fade-in">
-         {/* ##### STORE HERO: STATIC FOR SPEED ##### */}
-         <section className="relative overflow-hidden group">
-            <div className="relative bg-white rounded-[48px] p-12 md:p-20 lg:p-24 border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-16 shadow-sm">
-               <div className="max-w-2xl text-center md:text-left z-10 pl-12 border-l-8 border-black">
-                  <span className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-green-500/10 text-green-600 text-[11px] font-black uppercase tracking-[0.2em] border border-green-500/20 mb-10">
-                     🥦 Verified High-Definition Products
-                  </span>
-                  <h1 className="text-5xl md:text-7xl font-black text-black tracking-tighter mb-8 leading-[1.05]">
-                     Apna<span className="text-[var(--primary)]">Store</span>
-                  </h1>
-                  <p className="text-gray-900 text-xl font-bold leading-relaxed max-w-lg opacity-60">Handpicked items captured in HD. Inspected for quality and freshness.</p>
-               </div>
+  const getQuantity = (id: string) => items.find(item => item.product.id === id)?.quantity || 0;
 
-               <div className="relative z-10 hidden lg:flex gap-8 items-center">
-                  <div className="flex gap-6">
-                     <div className="w-32 h-32 bg-white rounded-3xl shadow-xl border border-gray-50 flex items-center justify-center overflow-hidden">
-                        <img src={FALLBACK_IMG} className="w-full h-full object-cover" alt="product" />
-                     </div>
-                     <div className="w-32 h-32 bg-white rounded-3xl shadow-xl border border-gray-100 flex items-center justify-center overflow-hidden translate-y-12">
-                        <img src="https://images.unsplash.com/photo-1518843875459-f738682238a6?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="product" />
-                     </div>
-                     <div className="w-32 h-32 bg-white rounded-3xl shadow-xl border border-gray-50 flex items-center justify-center overflow-hidden translate-y-6">
-                        <img src="https://images.unsplash.com/photo-1563636619-e910ef2a844b?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" alt="product" />
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </section>
+  const handleAddToCart = (product: Product) => {
+    addItem(product);
+    addToast('cart', `${product.name} added to cart!`);
+  };
 
-         {/* ##### AI Picks: Snappy ##### */}
-         <section className="space-y-12">
-            <div className="flex items-center gap-6 px-4 pl-12">
-               <div className="w-12 h-12 rounded-2xl bg-black text-[var(--primary)] flex items-center justify-center shadow-xl">
-                  <Sparkles size={24} />
-               </div>
-               <div>
-                  <h2 className="text-3xl font-black text-black tracking-tighter uppercase">AI Selected Picks</h2>
-               </div>
-            </div>
+  return (
+    <div className="space-y-6 pb-8 page-fade-in">
+      {/* Store Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
+            Grocery <span className="text-[var(--primary)]">Store</span>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Fresh products handpicked for quality</p>
+        </div>
 
-            <div className="flex gap-8 overflow-x-auto pb-12 -mx-4 px-4 pl-12 scrollbar-hide no-scrollbar">
-               {recommended.map((product) => (
-                  <motion.div
-                     key={`ai-${product.id}`}
-                     variants={fadeUp} initial="hidden" animate="visible"
-                     className="w-72 flex-shrink-0 bg-white rounded-[40px] p-8 pl-10 border border-gray-100 shadow-sm transition-all text-left group"
-                  >
-                     <div className="relative mb-8 h-44 flex items-center justify-center overflow-hidden rounded-[24px] bg-gray-50 border border-gray-50">
-                        <img
-                           src={product.image.startsWith('http') ? product.image : FALLBACK_IMG}
-                           onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG }}
-                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                           alt={product.name}
-                        />
-                     </div>
-                     <div className="pl-2">
-                        <h4 className="text-lg font-black text-black truncate tracking-tighter mb-1">{product.name}</h4>
-                        <p className="text-[11px] font-black text-gray-400 mb-6 uppercase tracking-widest leading-none">{product.unit}</p>
-                        <div className="flex items-center justify-between">
-                           <span className="text-xl font-black text-black tracking-tighter">{formatPrice(product.price)}</span>
-                           <button
-                              onClick={() => handleAddToCart(product)}
-                              className="w-11 h-11 rounded-2xl bg-black text-white hover:bg-[var(--primary)] flex items-center justify-center shadow-xl active:scale-90"
-                           >
-                              <Plus size={22} />
-                           </button>
-                        </div>
-                     </div>
-                  </motion.div>
-               ))}
-            </div>
-         </section>
-
-         {/* ##### GRID ##### */}
-         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24 pt-16 border-t border-gray-100 pl-4">
-            <div className="lg:col-span-3 space-y-16 hidden lg:block">
-               <div className="space-y-10 pl-8">
-                  <div className="flex items-center gap-4 text-[10px] font-black uppercase text-gray-400 tracking-[0.4em] mb-10"><Filter size={16} /> Filter Stock</div>
-                  <div className="space-y-3">
-                     {categories.map(cat => (
-                        <button
-                           key={cat}
-                           onClick={() => setSelectedCategory(cat)}
-                           className={`w-full text-left px-8 py-4.5 rounded-[20px] text-[13px] font-black transition-all flex items-center justify-between tracking-tight ${selectedCategory === cat ? 'bg-black text-white' : 'text-gray-900 hover:bg-gray-50'}`}
-                        >
-                           {cat}
-                           {selectedCategory === cat && <CheckCircle size={16} className="text-[var(--primary)]" />}
-                        </button>
-                     ))}
-                  </div>
-               </div>
-            </div>
-
-            <div className="lg:col-span-9 space-y-16">
-               <div className="flex flex-col sm:flex-row gap-8 justify-between items-center bg-gray-50 p-8 rounded-[40px] border border-gray-100 mx-4">
-                  <div className="flex items-center gap-5 text-xs font-black uppercase tracking-[0.3em] text-gray-400 pl-4">
-                     <SlidersHorizontal size={16} />
-                     <span className="text-black">{filteredProducts.length} Items</span>
-                  </div>
-               </div>
-
-               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-10 px-4">
-                  <AnimatePresence mode="popLayout">
-                     {filteredProducts.map((product) => {
-                        const quantity = getQuantity(product.id);
-                        return (
-                           <motion.div
-                              key={product.id}
-                              variants={fadeUp} initial="hidden" animate="visible"
-                              className="group bg-white rounded-[48px] p-10 pl-12 border border-gray-100 flex flex-col h-full text-left"
-                           >
-                              <div className="relative mb-10 h-44 flex items-center justify-center overflow-hidden rounded-[32px] bg-gray-50 border border-gray-50">
-                                 <img
-                                    src={product.image.startsWith('http') ? product.image : FALLBACK_IMG}
-                                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG }}
-                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    alt={product.name}
-                                 />
-                              </div>
-                              <div className="flex-grow space-y-2 pl-2">
-                                 <p className="text-[10px] font-black text-green-600 uppercase tracking-[0.3em] mb-2">{product.category}</p>
-                                 <h3 className="text-xl font-black text-black tracking-tighter leading-tight mb-1">{product.name}</h3>
-                                 <p className="text-[12px] font-black text-gray-400 uppercase tracking-widest">{product.unit}</p>
-                              </div>
-                              <div className="flex items-center justify-between mt-12 pt-10 border-t border-gray-50 pl-2">
-                                 <p className="text-2xl font-black text-black tracking-tighter leading-none">{formatPrice(product.price)}</p>
-
-                                 {quantity === 0 ? (
-                                    <button onClick={() => handleAddToCart(product)} className="px-8 py-4 rounded-2xl bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95">ADD</button>
-                                 ) : (
-                                    <div className="flex items-center gap-4 bg-gray-50 px-5 py-2.5 rounded-2xl border border-green-200">
-                                       <button onClick={() => updateQuantity(product.id, quantity - 1)} className="p-1 text-gray-400 transition-all active:scale-95"><Minus size={18} /></button>
-                                       <span className="text-base font-black text-black w-6 text-center">{quantity}</span>
-                                       <button onClick={() => addItem(product)} className="p-1 text-[var(--primary)] transition-all active:scale-95"><Plus size={18} /></button>
-                                    </div>
-                                 )}
-                              </div>
-                           </motion.div>
-                        );
-                     })}
-                  </AnimatePresence>
-               </div>
-            </div>
-         </div>
+        {/* Search + Sort */}
+        <div className="flex gap-3 items-center">
+          <div className="relative flex-1 md:w-72">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }} />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm font-medium transition-all focus:ring-2 focus:ring-[var(--primary)]/20"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border-color)', color: 'var(--fg)' }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="lg:hidden p-2.5 rounded-xl border transition-colors"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)', color: 'var(--fg)' }}
+          >
+            <Filter size={18} />
+          </button>
+        </div>
       </div>
-   );
+
+      {/* AI Picks Horizontal Scroll */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles size={18} className="text-[var(--primary)]" />
+          <h2 className="text-base font-semibold" style={{ color: 'var(--fg)' }}>Quick Picks</h2>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+          {recommended.map((product) => (
+            <div
+              key={`ai-${product.id}`}
+              className="w-48 flex-shrink-0 rounded-xl border overflow-hidden group transition-all hover:shadow-md"
+              style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+            >
+              <div className="relative h-28 overflow-hidden" style={{ background: 'var(--bg)' }}>
+                <ProductImage
+                  src={product.image}
+                  alt={product.name}
+                  sizes="192px"
+                />
+              </div>
+              <div className="p-3">
+                <h4 className="text-sm font-medium truncate mb-0.5" style={{ color: 'var(--fg)' }}>{product.name}</h4>
+                <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>{product.unit}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(product.price)}</span>
+                  <button
+                    onClick={() => handleAddToCart(product)}
+                    className="w-7 h-7 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] active:scale-90 transition-all"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar Filters */}
+        <div className={`lg:block ${showFilters ? 'block' : 'hidden'} space-y-4`}>
+          <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--fg)' }}>
+              <Filter size={16} /> Categories
+            </h3>
+            <div className="space-y-1">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    selectedCategory === cat.id
+                      ? 'bg-[var(--primary-light)] text-[var(--primary)]'
+                      : 'hover:bg-[var(--bg)]'
+                  }`}
+                  style={selectedCategory !== cat.id ? { color: 'var(--fg)' } : undefined}
+                >
+                  <span>{cat.icon}</span>
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sort */}
+          <div className="rounded-xl border p-4" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--fg)' }}>
+              <SlidersHorizontal size={16} /> Sort By
+            </h3>
+            <div className="space-y-1">
+              {sortOptions.map(option => (
+                <button
+                  key={option}
+                  onClick={() => setSortBy(option)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    sortBy === option
+                      ? 'bg-[var(--primary-light)] text-[var(--primary)]'
+                      : 'hover:bg-[var(--bg)]'
+                  }`}
+                  style={sortBy !== option ? { color: 'var(--fg)' } : undefined}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Product Grid */}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
+              {filteredProducts.length} items found
+            </p>
+            {/* Mobile category scroll */}
+            <div className="flex gap-2 lg:hidden overflow-x-auto no-scrollbar">
+              {categories.slice(0, 5).map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all ${
+                    selectedCategory === cat.id
+                      ? 'bg-[var(--primary)] text-white border-[var(--primary)]'
+                      : 'border-[var(--border-color)]'
+                  }`}
+                  style={selectedCategory !== cat.id ? { color: 'var(--fg)' } : undefined}
+                >
+                  {cat.icon} {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+              {Array.from({ length: 8 }).map((_, i) => <SkeletonProductCard key={i} />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+              <AnimatePresence mode="popLayout">
+                {filteredProducts.map((product, i) => {
+                  const quantity = getQuantity(product.id);
+                  return (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3, delay: i * 0.02 }}
+                      className="group rounded-xl border overflow-hidden transition-all hover:shadow-md"
+                      style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+                    >
+                      <div className="relative h-36 md:h-40 overflow-hidden" style={{ background: 'var(--bg)' }}>
+                        <ProductImage
+                          src={product.image}
+                          alt={product.name}
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                        {product.discount && (
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500 text-white">
+                            {product.discount}% OFF
+                          </span>
+                        )}
+                        {product.isOrganic && (
+                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-500 text-white">
+                            Organic
+                          </span>
+                        )}
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5">
+                          <Star size={10} className="text-amber-400 fill-amber-400" />
+                          <span className="text-[10px] font-semibold text-gray-700">{product.rating}</span>
+                        </div>
+                      </div>
+                      <div className="p-3.5">
+                        <p className="text-[11px] font-medium uppercase tracking-wide mb-1 text-[var(--primary)]">{product.category}</p>
+                        <h3 className="text-sm font-semibold leading-snug mb-1 line-clamp-2" style={{ color: 'var(--fg)' }}>{product.name}</h3>
+                        <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{product.unit}</p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-base font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(product.price)}</span>
+                            {product.originalPrice && (
+                              <span className="ml-1.5 text-xs line-through" style={{ color: 'var(--muted)' }}>{formatPrice(product.originalPrice)}</span>
+                            )}
+                          </div>
+                          {quantity === 0 ? (
+                            <button
+                              onClick={() => handleAddToCart(product)}
+                              className="px-3.5 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] active:scale-95 transition-all shadow-sm shadow-green-500/20"
+                            >
+                              ADD
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1 border rounded-lg px-1 py-0.5" style={{ borderColor: 'var(--primary)', background: 'var(--primary-light)' }}>
+                              <button onClick={() => updateQuantity(product.id, quantity - 1)} className="p-1 text-[var(--primary)] active:scale-90 transition-all">
+                                <Minus size={14} />
+                              </button>
+                              <span className="w-6 text-center text-sm font-semibold text-[var(--primary)]">{quantity}</span>
+                              <button onClick={() => addItem(product)} className="p-1 text-[var(--primary)] active:scale-90 transition-all">
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {!isLoading && filteredProducts.length === 0 && (
+            <div className="text-center py-16">
+              <div className="text-4xl mb-3">🔍</div>
+              <p className="text-base font-medium mb-1" style={{ color: 'var(--fg)' }}>No products found</p>
+              <p className="text-sm" style={{ color: 'var(--muted)' }}>Try adjusting your search or filters</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

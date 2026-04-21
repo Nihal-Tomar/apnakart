@@ -9,34 +9,37 @@ import { CheckCircle } from 'lucide-react';
 export function SkeletonPulse({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <div
-      className={`animate-pulse rounded-2xl ${className}`}
-      style={{ background: 'var(--surface-hover)', ...style }}
+      className={`animate-pulse rounded-lg ${className}`}
+      style={{ background: 'var(--border-color)', ...style }}
     />
   );
 }
 
 export function SkeletonCard() {
   return (
-    <div className="glass rounded-3xl p-5 space-y-3">
+    <div className="rounded-xl border p-4 space-y-3" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
       <div className="flex items-center justify-between">
-        <SkeletonPulse className="w-11 h-11 rounded-2xl" />
-        <SkeletonPulse className="w-16 h-5 rounded-full" />
+        <SkeletonPulse className="w-10 h-10 rounded-lg" />
+        <SkeletonPulse className="w-14 h-5 rounded-full" />
       </div>
-      <SkeletonPulse className="w-24 h-8 rounded-xl" />
-      <SkeletonPulse className="w-20 h-4 rounded-lg" />
+      <SkeletonPulse className="w-20 h-7 rounded-lg" />
+      <SkeletonPulse className="w-16 h-4 rounded-lg" />
     </div>
   );
 }
 
 export function SkeletonProductCard() {
   return (
-    <div className="glass rounded-3xl p-4 space-y-3">
-      <SkeletonPulse className="w-full h-24 rounded-2xl" />
-      <SkeletonPulse className="w-3/4 h-4 rounded-lg" />
-      <SkeletonPulse className="w-1/2 h-3 rounded-lg" />
-      <div className="flex justify-between items-center">
-        <SkeletonPulse className="w-12 h-5 rounded-lg" />
-        <SkeletonPulse className="w-16 h-8 rounded-xl" />
+    <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+      <SkeletonPulse className="w-full h-36 rounded-none" />
+      <div className="p-3.5 space-y-2">
+        <SkeletonPulse className="w-16 h-3 rounded" />
+        <SkeletonPulse className="w-full h-4 rounded" />
+        <SkeletonPulse className="w-12 h-3 rounded" />
+        <div className="flex justify-between items-center pt-1">
+          <SkeletonPulse className="w-14 h-5 rounded" />
+          <SkeletonPulse className="w-12 h-8 rounded-lg" />
+        </div>
       </div>
     </div>
   );
@@ -44,36 +47,26 @@ export function SkeletonProductCard() {
 
 export function SkeletonTransaction() {
   return (
-    <div className="flex items-center gap-3 p-4">
-      <SkeletonPulse className="w-10 h-10 rounded-xl flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <SkeletonPulse className="w-32 h-4 rounded-lg" />
-        <SkeletonPulse className="w-20 h-3 rounded-lg" />
+    <div className="flex items-center gap-3 p-3">
+      <SkeletonPulse className="w-8 h-8 rounded-lg flex-shrink-0" />
+      <div className="flex-1 space-y-1.5">
+        <SkeletonPulse className="w-28 h-4 rounded" />
+        <SkeletonPulse className="w-16 h-3 rounded" />
       </div>
-      <SkeletonPulse className="w-16 h-4 rounded-lg" />
+      <SkeletonPulse className="w-14 h-4 rounded" />
     </div>
   );
 }
 
 export function SkeletonDashboard() {
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <SkeletonPulse className="w-full h-40 rounded-3xl" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6">
+      <SkeletonPulse className="w-full h-40 rounded-2xl" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <SkeletonPulse key={i} className="h-28 rounded-3xl" />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => <SkeletonProductCard key={i} />)}
-        </div>
-        <div className="lg:col-span-2 space-y-3">
-          {[1, 2, 3, 4].map(i => <SkeletonPulse key={i} className="h-16 rounded-2xl" />)}
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {[1, 2, 3, 4, 5, 6].map(i => <SkeletonProductCard key={i} />)}
       </div>
     </div>
   );
@@ -81,14 +74,14 @@ export function SkeletonDashboard() {
 
 export function SkeletonStore() {
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <SkeletonPulse className="w-48 h-10 rounded-2xl" />
-      <SkeletonPulse className="w-full h-12 rounded-2xl" />
+    <div className="space-y-6">
+      <SkeletonPulse className="w-48 h-8 rounded-lg" />
+      <SkeletonPulse className="w-full h-10 rounded-xl" />
       <div className="flex gap-2">
-        {[1, 2, 3, 4, 5].map(i => <SkeletonPulse key={i} className="w-24 h-10 rounded-2xl flex-shrink-0" />)}
+        {[1, 2, 3, 4, 5].map(i => <SkeletonPulse key={i} className="w-24 h-9 rounded-xl flex-shrink-0" />)}
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => <SkeletonProductCard key={i} />)}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <SkeletonProductCard key={i} />)}
       </div>
     </div>
   );
@@ -108,16 +101,9 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-16 md:py-24">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-        className="text-6xl mb-4 inline-block"
-      >
-        {icon}
-      </motion.div>
-      <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--fg)' }}>{title}</h3>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-16">
+      <div className="text-5xl mb-4">{icon}</div>
+      <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--fg)' }}>{title}</h3>
       <p className="text-sm max-w-sm mx-auto mb-6" style={{ color: 'var(--muted)' }}>{description}</p>
       {action}
     </motion.div>
@@ -135,17 +121,11 @@ export function CartSuccessPopup({ show }: { show: boolean }) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.8, opacity: 0, y: -10 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="fixed top-20 right-8 z-[90] flex items-center gap-2.5 px-5 py-3 rounded-2xl shadow-xl"
+          className="fixed top-20 right-8 z-[90] flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg"
           style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}
         >
-          <motion.div
-            initial={{ rotate: -180, scale: 0 }}
-            animate={{ rotate: 0, scale: 1 }}
-            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-          >
-            <CheckCircle size={20} style={{ color: '#22C55E' }} />
-          </motion.div>
-          <span className="text-[13px] font-semibold" style={{ color: '#166534' }}>Added to cart!</span>
+          <CheckCircle size={18} style={{ color: '#22C55E' }} />
+          <span className="text-sm font-medium" style={{ color: '#166534' }}>Added to cart!</span>
         </motion.div>
       )}
     </AnimatePresence>
@@ -157,9 +137,9 @@ export function CartSuccessPopup({ show }: { show: boolean }) {
 export function PageTransition({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
     >
       {children}
     </motion.div>

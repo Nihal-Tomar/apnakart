@@ -4,197 +4,396 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AgentMessage } from '@/types';
 import { agentStatuses, getAgentResponse, getSuggestionChips } from '@/lib/agents';
-import { Bot, Send, Sparkles, User, Brain, ShoppingCart, Zap, Wallet, ArrowRight, MessageSquare, ShieldCheck, X, CheckCircle2, MoreHorizontal, PackageSearch, RotateCcw, CreditCard, Truck, Apple, HelpCircle } from 'lucide-react';
+import {
+  Bot, Send, Sparkles, Truck, RotateCcw,
+  CreditCard, Apple, ShieldCheck, ArrowRight
+} from 'lucide-react';
+import { useCartContext } from '@/lib/context';
+import { useToast } from '@/components/ui/Toast';
+import { formatTimestamp } from '@/lib/utils';
+
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Creates a stable initial welcome message with a FIXED timestamp.
+ * Using a literal "00:00" instead of toLocaleTimeString() means SSR and
+ * client produce exactly the same HTML, eliminating the hydration mismatch.
+ * The real time is filled in client-side via useEffect below.
+ */
+function makeWelcomeMessage(): AgentMessage {
+  return {
+    id: 'welcome',
+    agent: 'execution',
+    content:
+      "👋 Hi Nihal! I'm your AI grocery assistant. I can help you plan meals, create grocery lists, track your budget, and more. Try asking me something!",
+    timestamp: '', // filled in by useEffect
+    type: 'text',
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Quick action cards
+// ─────────────────────────────────────────────────────────────
+
+const quickActions = [
+  { title: 'Track Order',  desc: 'Live delivery status', icon: Truck,     color: '#22C55E', query: 'Where is my order?' },
+  { title: 'Returns',      desc: 'Easy return process',  icon: RotateCcw, color: '#EF4444', query: 'How to return an item?' },
+  { title: 'Pricing',      desc: 'Delivery charges info',icon: CreditCard, color: '#3B82F6', query: 'What are the delivery charges?' },
+  { title: 'Quality',      desc: 'Freshness guarantee',  icon: Apple,     color: '#F59E0B', query: 'Is everything fresh?' },
+];
+
+const examplePrompts = [
+  'Create grocery list under ₹500',
+  'Suggest meals for the week',
+  "How's my budget looking?",
+  'Build a smart cart for me',
+  'Plan my meals for today',
+  'What items should I reorder?',
+];
+
+// ─────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────
 
 export default function AssistantPage() {
-  const [messages, setMessages] = useState<AgentMessage[]>([
-    { id: '0', agent: 'execution', content: "👋 System Ready. Select a Quick Protocol below or deploy a custom command sequence.", timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), type: 'text' },
-  ]);
+  const [messages, setMessages] = useState<AgentMessage[]>([makeWelcomeMessage()]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const { addItem } = useCartContext();
+  const { addToast } = useToast();
 
-  const quickSolves = [
-    { title: "Order Status", desc: "Live GPS Tracking", icon: Truck, color: "#82C341", query: "Where is my order?" },
-    { title: "Return Center", desc: "100% Money Back", icon: RotateCcw, color: "#EF4444", query: "How to return an item?" },
-    { title: "Billing Sync", desc: "Refunds & Ledger", icon: CreditCard, color: "#3b82f6", query: "What are the delivery charges?" },
-    { title: "Freshness", desc: "Quality Verified", icon: Apple, color: "#FF9F00", query: "Is everything fresh?" },
-  ];
+  // ── Stamp the welcome message with the real local time once we're on the client.
+  useEffect(() => {
+    const now = Date.now();
+    setMessages(prev =>
+      prev.map(m =>
+        m.id === 'welcome' ? { ...m, timestamp: formatTimestamp(now) } : m
+      )
+    );
+  }, []);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // ── Auto-scroll
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
+  // ── Send a message
   const handleSend = (text?: string) => {
-    const msg = text || input;
-    if (!msg.trim()) return;
-    const userMsg: AgentMessage = { id: Date.now().toString(), agent: 'user', content: msg, timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), type: 'text' };
+    const msg = (text ?? input).trim();
+    if (!msg) return;
+
+    // Capture the timestamp once here — same value used for both the
+    // user bubble and (after the async gap) the assistant bubble.
+    const userTs = Date.now();
+
+    const userMsg: AgentMessage = {
+      id: `user-${userTs}`,
+      agent: 'user',
+      content: msg,
+      timestamp: formatTimestamp(userTs),
+      type: 'text',
+    };
+
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setThinking(true);
 
     setTimeout(() => {
-      const response = getAgentResponse(msg);
+      const replyTs = Date.now();
+      const response = getAgentResponse(msg, replyTs);
       setMessages(prev => [...prev, response]);
       setThinking(false);
-    }, 800); 
+    }, 800);
   };
 
+  // ─────────────────────────────────────────────────────────
+  // Agent display config
+  // ─────────────────────────────────────────────────────────
+
+  const agentIcons: Record<string, string> = {
+    planner: '🧠',
+    budget: '💰',
+    shopping: '🛒',
+    execution: '⚡',
+    user: '👤',
+  };
+
+  const agentNames: Record<string, string> = {
+    planner: 'Planner',
+    budget: 'Budget Advisor',
+    shopping: 'Shopping Assistant',
+    execution: 'System',
+    user: 'You',
+  };
+
+  // ─────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────
+
   return (
-    <div className="space-y-24 pb-32 page-fade-in max-w-7xl mx-auto pl-4">
-      {/* ===== ELITE HEADER ===== */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col lg:flex-row lg:items-center justify-between gap-12 pb-16 border-b border-gray-100">
-        <div className="pl-12 border-l-[12px] border-black space-y-4">
-           <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-[22px] bg-black text-[var(--primary)] flex items-center justify-center shadow-3xl transform -rotate-6 hover:rotate-0 transition-all duration-700">
-                  <Brain size={32} />
-              </div>
-              <h1 className="text-6xl md:text-8xl font-[950] text-black tracking-[-0.05em] leading-none uppercase">
-                AI <span className="text-purple-600">PRO</span>
-              </h1>
-           </div>
-           <p className="text-[11px] font-[1000] text-gray-400 uppercase tracking-[0.5em] pl-2 opacity-60">High-Fidelity Autonomous Concierge for 10-Min Logistics</p>
+    <div className="space-y-6 pb-8 page-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
+            AI <span className="text-[var(--primary)]">Assistant</span>
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>
+            Your smart grocery concierge — ask anything!
+          </p>
         </div>
-        <div className="flex items-center gap-6 px-10 py-5 bg-gray-50/50 rounded-[32px] border border-gray-100 shadow-sm relative overflow-hidden group">
-           <div className="absolute inset-0 bg-green-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
-           <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse relative z-10" />
-           <span className="text-[11px] font-black uppercase text-black tracking-[0.3em] relative z-10">Global Network: <span className="text-green-600">STABLE</span></span>
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+          style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+        >
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs font-medium" style={{ color: 'var(--muted)' }}>AI Online</span>
         </div>
-      </motion.div>
+      </div>
 
-      {/* ===== BEAUTIFUL QUICK SOLVE HUB: ZEPTO STYLE ===== */}
-      <section className="space-y-12">
-        <div className="flex items-center gap-6 px-4">
-           <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center shadow-2xl">
-              <Zap size={24} />
-           </div>
-           <div>
-              <h2 className="text-4xl font-black text-black tracking-tighter uppercase">Quick Solve Hub</h2>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-1.5 pl-1">Instant Resolution Protocols</p>
-           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-           {quickSolves.map((solve, i) => (
-             <motion.button 
-                key={solve.title}
-                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                whileHover={{ y: -12 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleSend(solve.query)}
-                className="bg-white p-10 pl-12 rounded-[48px] border border-gray-100 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)] text-left group hover:bg-black transition-all duration-700 relative overflow-hidden h-[240px] flex flex-col justify-between"
-             >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 rounded-full translate-x-16 -translate-y-16 group-hover:scale-[3] group-hover:bg-white/5 transition-all duration-1000" />
-                <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-xl mb-6 relative z-10 transition-colors" style={{ background: solve.color + '15', color: solve.color }}>
-                   <solve.icon size={32} />
-                </div>
-                <div className="relative z-10">
-                   <h3 className="text-2xl font-[950] text-black tracking-tighter group-hover:text-white transition-colors">{solve.title}</h3>
-                   <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-gray-400 transition-colors">{solve.desc}</p>
-                </div>
-             </motion.button>
-           ))}
-        </div>
-      </section>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {quickActions.map((action, i) => (
+          <motion.button
+            key={action.title}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            onClick={() => handleSend(action.query)}
+            className="group p-4 rounded-xl border text-left transition-all hover:shadow-md hover:border-[var(--primary)]/30"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
+              style={{ background: `${action.color}15`, color: action.color }}
+            >
+              <action.icon size={20} />
+            </div>
+            <h3 className="text-sm font-semibold mb-0.5" style={{ color: 'var(--fg)' }}>{action.title}</h3>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>{action.desc}</p>
+          </motion.button>
+        ))}
+      </div>
 
-      {/* ===== INTERACTIVE CHAT TERMINAL ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-20 pt-12 border-t border-gray-100">
-        
-        {/* Main Chat Flow */}
-        <div className="lg:col-span-8 space-y-10">
-           <div className="bg-white rounded-[72px] border border-gray-100 shadow-[0_50px_100px_-50px_rgba(0,0,0,0.1)] flex flex-col h-[650px] overflow-hidden group">
-              
-              {/* Messages Viewport */}
-              <div className="flex-1 overflow-y-auto p-12 space-y-12 scrollbar-hide no-scrollbar scrolling-touch">
-                 <AnimatePresence initial={false}>
-                    {messages.map(msg => (
-                      <motion.div 
-                        key={msg.id} 
-                        initial={{ opacity: 0, x: msg.agent === 'user' ? 40 : -40 }} 
-                        animate={{ opacity: 1, x: 0 }}
-                        className={`flex gap-6 ${msg.agent === 'user' ? 'flex-row-reverse' : ''}`}
-                      >
-                         <div className={`w-14 h-14 rounded-[22px] flex items-center justify-center text-3xl shadow-xl flex-shrink-0 animate-float
-                            ${msg.agent === 'user' ? 'bg-black text-white' : 'bg-gray-50'}`}
-                         >
-                            {msg.agent === 'user' ? '👤' : msg.agent === 'planner' ? '🧠' : msg.agent === 'budget' ? '💰' : msg.agent === 'shopping' ? '🛒' : '⚡'}
-                         </div>
-                         <div className={`flex flex-col gap-2 max-w-[80%] ${msg.agent === 'user' ? 'items-end' : 'items-start'}`}>
-                            <div className="flex items-center gap-4 px-2">
-                               <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.4em]">{msg.agent === 'user' ? 'Commander Sequence' : msg.agent + ' protocol'}</span>
-                            </div>
-                            <div className={`rounded-[40px] px-10 py-7 text-[15px] font-black leading-relaxed shadow-sm transition-all duration-500 hover:shadow-2xl
-                               ${msg.agent === 'user' ? 'bg-black text-white rounded-tr-none' : 'bg-gray-50 text-black border border-gray-50 whitespace-pre-wrap'}`}>
-                               {msg.content}
-                            </div>
-                         </div>
-                      </motion.div>
-                    ))}
-                 </AnimatePresence>
-                 {thinking && (
-                    <div className="flex gap-6 items-center">
-                       <div className="w-14 h-14 rounded-[22px] bg-purple-50 text-purple-600 flex items-center justify-center text-2xl animate-spin-slow">🧠</div>
-                       <p className="text-[10px] font-black uppercase text-purple-600 tracking-[0.6em] animate-pulse">Analyzing Asset Resolution...</p>
-                    </div>
-                 )}
-                 <div ref={chatEndRef} />
-              </div>
-
-              {/* Advanced Command Input */}
-              <div className="p-12 bg-gray-50/40 border-t border-gray-50 flex flex-col gap-6">
-                 <div className="flex gap-4 items-center">
-                    <input 
-                       type="text" 
-                       value={input} 
-                       onChange={e => setInput(e.target.value)}
-                       onKeyDown={e => e.key === 'Enter' && handleSend()}
-                       placeholder="Deploy custom command or question..." 
-                       className="flex-1 px-10 py-6 rounded-[32px] bg-white border border-gray-100 text-[14px] font-[900] text-black focus:ring-[12px] focus:ring-black/5 shadow-inner transition-all placeholder:text-gray-200"
-                    />
-                    <motion.button 
-                       whileTap={{ scale: 0.9 }}
-                       onClick={() => handleSend()} 
-                       className="w-20 h-20 rounded-[32px] bg-black text-white flex items-center justify-center shadow-3xl hover:bg-gray-800 transition-all"
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chat panel */}
+        <div className="lg:col-span-2">
+          <div
+            className="rounded-xl border overflow-hidden flex flex-col h-[520px]"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+          >
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 no-scrollbar">
+              <AnimatePresence initial={false}>
+                {messages.map(msg => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex gap-3 ${msg.agent === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
+                    {/* Avatar */}
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
+                        msg.agent === 'user' ? 'bg-[var(--primary)] text-white' : ''
+                      }`}
+                      style={msg.agent !== 'user' ? { background: 'var(--bg)' } : undefined}
                     >
-                       <Send size={32} />
-                    </motion.button>
-                 </div>
-              </div>
-           </div>
+                      {agentIcons[msg.agent]}
+                    </div>
+
+                    {/* Bubble */}
+                    <div
+                      className={`flex flex-col gap-1 max-w-[80%] ${
+                        msg.agent === 'user' ? 'items-end' : 'items-start'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-medium" style={{ color: 'var(--muted)' }}>
+                          {agentNames[msg.agent]}
+                        </span>
+                        {/* timestamp is '' on first server render, filled by useEffect */}
+                        {msg.timestamp && (
+                          <span className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                            {msg.timestamp}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={`rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                          msg.agent === 'user'
+                            ? 'bg-[var(--primary)] text-white rounded-tr-sm'
+                            : 'rounded-tl-sm'
+                        }`}
+                        style={
+                          msg.agent !== 'user'
+                            ? { background: 'var(--bg)', color: 'var(--fg)' }
+                            : undefined
+                        }
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {/* Thinking indicator */}
+              {thinking && (
+                <div className="flex gap-3 items-center">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                    style={{ background: 'var(--bg)' }}
+                  >
+                    🧠
+                  </div>
+                  <div
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                    style={{ background: 'var(--bg)' }}
+                  >
+                    <div className="flex gap-1">
+                      {[0, 1, 2].map(i => (
+                        <motion.div
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full bg-[var(--primary)]"
+                          animate={{ y: [0, -6, 0] }}
+                          transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs ml-1" style={{ color: 'var(--muted)' }}>
+                      Thinking...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Suggestion chips */}
+            <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+              {examplePrompts.slice(0, 4).map(prompt => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--muted)' }}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Input row */}
+            <div className="p-4 border-t flex gap-3" style={{ borderColor: 'var(--border-color)' }}>
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                placeholder="Ask me anything about groceries, budget, meals..."
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all focus:ring-2 focus:ring-[var(--primary)]/20"
+                style={{
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--fg)',
+                }}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={!input.trim()}
+                className="w-10 h-10 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] active:scale-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-green-500/20"
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Right Sidebar: Agent Status Console */}
-        <div className="lg:col-span-4 space-y-16">
-           <div className="bg-white p-14 rounded-[72px] border border-gray-100 shadow-xl space-y-12">
-              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.5em] border-b border-gray-50 pb-6 pl-2">System Status Console</h4>
-              <div className="space-y-10 pl-2">
-                 {agentStatuses.map(agent => (
-                   <div key={agent.name} className="flex items-center gap-6 group">
-                      <div className="w-16 h-16 rounded-[24px] bg-gray-50 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
-                         {agent.icon}
-                      </div>
-                      <div className="flex-1">
-                         <div className="flex justify-between items-center mb-1">
-                            <h5 className="text-[13px] font-black text-black tracking-tight uppercase">{agent.name}</h5>
-                            <span className={`w-3 h-3 rounded-full ${agent.status === 'active' ? 'bg-green-500 shadow-lg' : 'bg-gray-200'}`}></span>
-                         </div>
-                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{agent.role}</p>
-                      </div>
-                   </div>
-                 ))}
-              </div>
-           </div>
+        {/* Sidebar */}
+        <div className="space-y-4">
+          {/* Agent status */}
+          <div
+            className="rounded-xl border p-5"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+          >
+            <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--fg)' }}>AI Agents</h4>
+            <div className="space-y-3">
+              {agentStatuses.map(agent => (
+                <div key={agent.name} className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
+                    style={{ background: 'var(--bg)' }}
+                  >
+                    {agent.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>
+                      {agent.name}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--muted)' }}>
+                      {agent.role}
+                    </p>
+                  </div>
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      agent.status === 'active'
+                        ? 'bg-green-500'
+                        : agent.status === 'thinking'
+                        ? 'bg-amber-500 animate-pulse'
+                        : 'bg-gray-300'
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
-           {/* Security Banner: Professional High-Contrast */}
-           <div className="bg-black p-14 rounded-[72px] text-white shadow-3xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full translate-x-32 translate-y-32 blur-3xl" />
-              <ShieldCheck size={72} className="text-purple-400 mb-10" />
-              <h4 className="text-4xl font-[950] tracking-tight mb-6 uppercase leading-none">AI Concierge Guarantee</h4>
-              <p className="text-gray-400 text-sm font-bold leading-relaxed mb-12">Every resolution processed through our 'Quick Solve Hub' is backed by our instant resolution protocol. 100% Verified.</p>
-              <button className="w-full py-6 rounded-[24px] bg-white text-black text-[11px] font-[950] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-4 group">
-                 Open Help Desk <HelpCircle size={20} />
-              </button>
-           </div>
+          {/* Example prompts */}
+          <div
+            className="rounded-xl border p-5"
+            style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
+          >
+            <h4
+              className="text-sm font-semibold mb-3 flex items-center gap-2"
+              style={{ color: 'var(--fg)' }}
+            >
+              <Sparkles size={16} className="text-[var(--primary)]" /> Try asking
+            </h4>
+            <div className="space-y-1">
+              {examplePrompts.map(prompt => (
+                <button
+                  key={prompt}
+                  onClick={() => handleSend(prompt)}
+                  className="w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all hover:bg-[var(--bg)] flex items-center gap-2 group"
+                  style={{ color: 'var(--fg)' }}
+                >
+                  <ArrowRight
+                    size={14}
+                    className="text-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                  <span className="group-hover:translate-x-1 transition-transform">{prompt}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Trust badge */}
+          <div className="rounded-xl p-5 bg-gradient-to-br from-[#22C55E]/5 to-[#22C55E]/10 border border-green-100">
+            <ShieldCheck size={24} className="text-[var(--primary)] mb-3" />
+            <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--fg)' }}>
+              AI Guarantee
+            </h4>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
+              All suggestions are personalized based on your shopping history. Your data stays
+              private and secure.
+            </p>
+          </div>
         </div>
       </div>
     </div>
