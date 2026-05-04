@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Wallet, TrendingDown, TrendingUp, ArrowUpRight, ArrowDownLeft,
@@ -10,6 +10,7 @@ import {
 import { formatPrice } from '@/lib/utils';
 import { transactions, categorySpending, dailySpending } from '@/lib/data/transactions';
 import { subscriptions } from '@/lib/data/subscriptions';
+import { useCartContext } from '@/lib/context';
 import dynamic from 'next/dynamic';
 
 const BarChart = dynamic(() => import('recharts').then(mod => mod.BarChart), { ssr: false });
@@ -39,10 +40,25 @@ const insights = [
 
 export default function BudgetPage() {
   const [activeTab, setActiveTab] = useState('overview');
+  const { totalPrice: cartTotal } = useCartContext();
   const totalBudget = 15000;
-  const totalSpent = 9581;
+  const baseSpent = 9581;
+  const totalSpent = baseSpent + cartTotal;
   const budgetPercent = Math.round((totalSpent / totalBudget) * 100);
   const remaining = totalBudget - totalSpent;
+
+  // ── Merge localStorage order transactions with the static demo list
+  const [allTransactions, setAllTransactions] = useState(transactions);
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('apnakart-transactions') || '[]');
+      if (stored.length > 0) setAllTransactions([...stored, ...transactions]);
+    } catch { /* ignore */ }
+  }, [activeTab]); // re-read when user switches to Transactions tab
+
+  // ── Delay chart render to avoid recharts flash-in (shows skeleton instead)
+  const [chartsReady, setChartsReady] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setChartsReady(true), 400); return () => clearTimeout(t); }, []);
 
   const weeklyData = dailySpending.map(d => ({
     ...d,
@@ -135,42 +151,61 @@ export default function BudgetPage() {
               <span style={{ color: 'var(--muted)' }}>₹{totalSpent.toLocaleString('en-IN')} spent</span>
               <span className="text-[var(--primary)] font-medium">₹{remaining.toLocaleString('en-IN')} left</span>
             </div>
+            {cartTotal > 0 && (
+              <p className="text-xs mt-2 flex items-center gap-1" style={{ color: 'var(--muted)' }}>
+                🛒 Includes <span className="font-semibold text-[var(--primary)]">{formatPrice(cartTotal)}</span> from your active cart
+              </p>
+            )}
           </div>
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly Spending Bar Chart */}
-            <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
-              <h3 className="text-base font-semibold mb-6" style={{ color: 'var(--fg)' }}>Weekly Spending</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={weeklyData} barCategoryGap="30%">
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94A3B8' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94A3B8' }} tickFormatter={v => `₹${v}`} />
-                  <Tooltip
-                    formatter={(value) => [formatPrice(Number(value ?? 0)), 'Spent']}
-                    contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
-                  />
-                  <Bar dataKey="amount" radius={[6, 6, 0, 0]} fill="#22C55E" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {!chartsReady ? (
+              <>
+                <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+                  <div className="skeleton h-4 w-32 rounded mb-6" />
+                  <div className="skeleton h-[220px] w-full rounded-xl" />
+                </div>
+                <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+                  <div className="skeleton h-4 w-40 rounded mb-6" />
+                  <div className="skeleton h-[220px] w-full rounded-xl" />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Weekly Spending Bar Chart */}
+                <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+                  <h3 className="text-base font-semibold mb-6" style={{ color: 'var(--fg)' }}>Weekly Spending</h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={weeklyData} barCategoryGap="30%">
+                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94A3B8' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94A3B8' }} tickFormatter={v => `₹${v}`} />
+                      <Tooltip
+                        formatter={(value) => [formatPrice(Number(value ?? 0)), 'Spent']}
+                        contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
+                      />
+                      <Bar dataKey="amount" radius={[6, 6, 0, 0]} fill="#22C55E" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
 
-            {/* Category Pie Chart */}
-            <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
-              <h3 className="text-base font-semibold mb-6" style={{ color: 'var(--fg)' }}>Spending by Category</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <RPieChart>
-                  <Pie data={categorySpending} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} strokeWidth={0}>
-                    {categorySpending.map((entry, i) => (
-                      <Cell key={entry.category} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [formatPrice(Number(value ?? 0)), 'Spent']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }} />
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-                </RPieChart>
-              </ResponsiveContainer>
-              
-            </div>
+                {/* Category Pie Chart */}
+                <div className="rounded-xl border p-6" style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}>
+                  <h3 className="text-base font-semibold mb-6" style={{ color: 'var(--fg)' }}>Spending by Category</h3>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <RPieChart>
+                      <Pie data={categorySpending} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} strokeWidth={0}>
+                        {categorySpending.map((entry, i) => (
+                          <Cell key={entry.category} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatPrice(Number(value ?? 0)), 'Spent']} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }} />
+                      <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                    </RPieChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Insights */}
@@ -235,7 +270,7 @@ export default function BudgetPage() {
             <span>Date</span>
             <span className="text-right">Amount</span>
           </div>
-          {transactions.map(tx => (
+          {allTransactions.map(tx => (
             <div key={tx.id} className="grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-0 items-center p-4 border-b last:border-0 hover:bg-[var(--bg)] transition-colors" style={{ borderColor: 'var(--border-color)' }}>
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === 'credit' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-400'}`}>

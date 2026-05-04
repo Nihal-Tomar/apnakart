@@ -21,9 +21,10 @@ export function formatDate(dateStr: string): string {
  * `new Date().getHours()` — always client-side inside useEffect.
  */
 export function getGreetingForHour(hour: number): string {
-  if (hour < 12) return 'Good Morning';
-  if (hour < 17) return 'Good Afternoon';
-  return 'Good Evening';
+  if (hour >= 5 && hour < 12) return 'Good Morning';
+  if (hour >= 12 && hour < 17) return 'Good Afternoon';
+  if (hour >= 17 && hour < 21) return 'Good Evening';
+  return 'Good Night';
 }
 
 /**

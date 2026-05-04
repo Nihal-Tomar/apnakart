@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Product } from '@/types';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, Minus, Filter, Star, ChevronDown, Sparkles, SlidersHorizontal, X } from 'lucide-react';
+import { Search, Plus, Minus, Filter, Star, ChevronDown, Sparkles, SlidersHorizontal, X, Heart } from 'lucide-react';
 import { products, categories } from '@/lib/data/products';
 import { formatPrice } from '@/lib/utils';
 import { useCartContext } from '@/lib/context';
@@ -12,6 +13,7 @@ import { getRecommendedProducts } from '@/lib/agents';
 import { useToast } from '@/components/ui/Toast';
 import { useCartSidebar } from '@/components/ui/CartSidebar';
 import { SkeletonProductCard } from '@/components/ui/Skeletons';
+import { useWishlist } from '@/lib/hooks/useWishlist';
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400";
 
@@ -38,6 +40,7 @@ export default function StorePage() {
   const { addItem, items, updateQuantity } = useCartContext();
   const { addToast } = useToast();
   const { openCart } = useCartSidebar();
+  const { toggle: toggleWishlist, isWishlisted } = useWishlist();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -49,6 +52,12 @@ export default function StorePage() {
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Read ?search= param from URL on mount (set by mobile header redirect)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('search');
+    if (q) { setSearchQuery(q); setDebouncedSearch(q); }
   }, []);
 
   // Debounced search
@@ -142,24 +151,32 @@ export default function StorePage() {
               className="w-48 flex-shrink-0 rounded-xl border overflow-hidden group transition-all hover:shadow-md"
               style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
             >
-              <div className="relative h-28 overflow-hidden" style={{ background: 'var(--bg)' }}>
-                <ProductImage
-                  src={product.image}
-                  alt={product.name}
-                  sizes="192px"
-                />
-              </div>
+              <Link href={`/store/${product.id}`} className="block">
+                <div className="relative h-28 overflow-hidden" style={{ background: 'var(--bg)' }}>
+                  <ProductImage src={product.image} alt={product.name} sizes="192px" />
+                  <button
+                    onClick={e => { e.stopPropagation(); toggleWishlist(product); }}
+                    className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
+                  >
+                    <Heart size={13} className={isWishlisted(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'} />
+                  </button>
+                </div>
+              </Link>
               <div className="p-3">
                 <h4 className="text-sm font-medium truncate mb-0.5" style={{ color: 'var(--fg)' }}>{product.name}</h4>
                 <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>{product.unit}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{formatPrice(product.price)}</span>
-                  <button
-                    onClick={() => handleAddToCart(product)}
-                    className="w-7 h-7 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] active:scale-90 transition-all"
-                  >
-                    <Plus size={14} />
-                  </button>
+                  {product.inStock ? (
+                    <button
+                      onClick={() => handleAddToCart(product)}
+                      className="w-7 h-7 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] active:scale-90 transition-all"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-400">Sold Out</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -262,30 +279,41 @@ export default function StorePage() {
                       className="group rounded-xl border overflow-hidden transition-all hover:shadow-md"
                       style={{ background: 'var(--surface)', borderColor: 'var(--border-color)' }}
                     >
-                      <div className="relative h-36 md:h-40 overflow-hidden" style={{ background: 'var(--bg)' }}>
-                        <ProductImage
-                          src={product.image}
-                          alt={product.name}
-                          sizes="(max-width: 768px) 50vw, 25vw"
-                        />
-                        {product.discount && (
-                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500 text-white">
-                            {product.discount}% OFF
-                          </span>
-                        )}
-                        {product.isOrganic && (
-                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-500 text-white">
-                            Organic
-                          </span>
-                        )}
-                        <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5">
-                          <Star size={10} className="text-amber-400 fill-amber-400" />
-                          <span className="text-[10px] font-semibold text-gray-700">{product.rating}</span>
+                      <Link href={`/store/${product.id}`} className="block">
+                        <div className="relative h-36 md:h-40 overflow-hidden" style={{ background: 'var(--bg)' }}>
+                          <ProductImage
+                            src={product.image}
+                            alt={product.name}
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                          />
+                          {product.discount && (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-500 text-white">
+                              {product.discount}% OFF
+                            </span>
+                          )}
+                          {product.isOrganic && (
+                            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-500 text-white">
+                              Organic
+                            </span>
+                          )}
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-md px-1.5 py-0.5">
+                            <Star size={10} className="text-amber-400 fill-amber-400" />
+                            <span className="text-[10px] font-semibold text-gray-700">{product.rating}</span>
+                          </div>
+                          {/* Wishlist toggle */}
+                          <button
+                            onClick={e => { e.stopPropagation(); toggleWishlist(product); }}
+                            className="absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
+                          >
+                            <Heart size={13} className={isWishlisted(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-400'} />
+                          </button>
                         </div>
-                      </div>
+                      </Link>
                       <div className="p-3.5">
                         <p className="text-[11px] font-medium uppercase tracking-wide mb-1 text-[var(--primary)]">{product.category}</p>
-                        <h3 className="text-sm font-semibold leading-snug mb-1 line-clamp-2" style={{ color: 'var(--fg)' }}>{product.name}</h3>
+                        <Link href={`/store/${product.id}`}>
+                          <h3 className="text-sm font-semibold leading-snug mb-1 line-clamp-2 hover:text-[var(--primary)] transition-colors" style={{ color: 'var(--fg)' }}>{product.name}</h3>
+                        </Link>
                         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{product.unit}</p>
                         <div className="flex items-center justify-between">
                           <div>
@@ -294,7 +322,9 @@ export default function StorePage() {
                               <span className="ml-1.5 text-xs line-through" style={{ color: 'var(--muted)' }}>{formatPrice(product.originalPrice)}</span>
                             )}
                           </div>
-                          {quantity === 0 ? (
+                          {!product.inStock ? (
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-400">Sold Out</span>
+                          ) : quantity === 0 ? (
                             <button
                               onClick={() => handleAddToCart(product)}
                               className="px-3.5 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-semibold hover:bg-[var(--primary-hover)] active:scale-95 transition-all shadow-sm shadow-green-500/20"

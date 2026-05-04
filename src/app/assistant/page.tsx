@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useCartContext } from '@/lib/context';
 import { useToast } from '@/components/ui/Toast';
-import { formatTimestamp } from '@/lib/utils';
+import { formatTimestamp, getGreetingForHour } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
@@ -27,7 +27,7 @@ function makeWelcomeMessage(): AgentMessage {
     id: 'welcome',
     agent: 'execution',
     content:
-      "👋 Hi Nihal! I'm your AI grocery assistant. I can help you plan meals, create grocery lists, track your budget, and more. Try asking me something!",
+      "👋 Hi there! I'm your AI grocery assistant. I can help you plan meals, create grocery lists, track your budget, and more. Try asking me something!",
     timestamp: '', // filled in by useEffect
     type: 'text',
   };
@@ -44,14 +44,7 @@ const quickActions = [
   { title: 'Quality',      desc: 'Freshness guarantee',  icon: Apple,     color: '#F59E0B', query: 'Is everything fresh?' },
 ];
 
-const examplePrompts = [
-  'Create grocery list under ₹500',
-  'Suggest meals for the week',
-  "How's my budget looking?",
-  'Build a smart cart for me',
-  'Plan my meals for today',
-  'What items should I reorder?',
-];
+// examplePrompts replaced by getSuggestionChips() — single source of truth in /lib/agents
 
 // ─────────────────────────────────────────────────────────────
 // Component
@@ -65,12 +58,21 @@ export default function AssistantPage() {
   const { addItem } = useCartContext();
   const { addToast } = useToast();
 
-  // ── Stamp the welcome message with the real local time once we're on the client.
+  // ── Stamp the welcome message with the real local time AND dynamic name
+  // once we're on the client — avoids SSR/hydration mismatches.
   useEffect(() => {
     const now = Date.now();
+    const storedName = localStorage.getItem('userName') || 'there';
+    const greeting = getGreetingForHour(new Date().getHours());
     setMessages(prev =>
       prev.map(m =>
-        m.id === 'welcome' ? { ...m, timestamp: formatTimestamp(now) } : m
+        m.id === 'welcome'
+          ? {
+              ...m,
+              timestamp: formatTimestamp(now),
+              content: `👋 ${greeting}, ${storedName}! I'm your AI grocery assistant. I can help you plan meals, create grocery lists, track your budget, and more. Try asking me something!`,
+            }
+          : m
       )
     );
   }, []);
@@ -277,7 +279,7 @@ export default function AssistantPage() {
 
             {/* Suggestion chips */}
             <div className="px-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
-              {examplePrompts.slice(0, 4).map(prompt => (
+              {getSuggestionChips().slice(0, 4).map(prompt => (
                 <button
                   key={prompt}
                   onClick={() => handleSend(prompt)}
@@ -366,7 +368,7 @@ export default function AssistantPage() {
               <Sparkles size={16} className="text-[var(--primary)]" /> Try asking
             </h4>
             <div className="space-y-1">
-              {examplePrompts.map(prompt => (
+              {getSuggestionChips().map(prompt => (
                 <button
                   key={prompt}
                   onClick={() => handleSend(prompt)}

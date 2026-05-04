@@ -19,6 +19,19 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
+  // ── Rehydrate cart from localStorage on first mount (client-side only)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('apnakart-cart');
+      if (stored) setItems(JSON.parse(stored));
+    } catch { /* ignore malformed data */ }
+  }, []);
+
+  // ── Persist cart to localStorage whenever items change
+  useEffect(() => {
+    localStorage.setItem('apnakart-cart', JSON.stringify(items));
+  }, [items]);
+
   const addItem = (product: Product) => {
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);

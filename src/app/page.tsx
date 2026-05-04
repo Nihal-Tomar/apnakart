@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, Variants } from 'framer-motion';
 import { ShoppingBag, Wallet, Bot, TrendingUp, ChevronRight, Plus, Sparkles, Clock, Truck, Star, ArrowRight } from 'lucide-react';
+import CountUp from '@/components/ui/CountUp';
 import { formatPrice } from '@/lib/utils';
 import { getGreetingForHour } from '@/lib/utils';
 import { getRecommendedProducts } from '@/lib/agents';
@@ -36,9 +37,9 @@ const quickActions = [
 ];
 
 const stats = [
-  { label: 'Weekly Spend', value: '₹9,581', change: '+12%', icon: Wallet, positive: false },
-  { label: 'Items Bought', value: '47', change: '+8', icon: ShoppingBag, positive: true },
-  { label: 'Total Savings', value: '₹1,230', change: '+₹200', icon: TrendingUp, positive: true },
+  { label: 'Weekly Spend',  value: '₹9,581', numericValue: 9581, prefix: '₹', change: '+12%', icon: Wallet,      positive: false },
+  { label: 'Items Bought',  value: '47',     numericValue: 47,   prefix: '',  change: '+8',   icon: ShoppingBag, positive: true },
+  { label: 'Total Savings', value: '₹1,230', numericValue: 1230, prefix: '₹', change: '+₹200',icon: TrendingUp,  positive: true },
 ];
 
 export default function DashboardPage() {
@@ -51,9 +52,28 @@ export default function DashboardPage() {
   // ── Greeting: computed client-side only to avoid hydration mismatch.
   // SSR renders a neutral 'Hello'; useEffect swaps it with the real greeting.
   const [greeting, setGreeting] = useState('Hello');
+  const [name, setName] = useState('Nihal');
+  const [showModal, setShowModal] = useState(false);
+  const [inputName, setInputName] = useState('');
+
   useEffect(() => {
     setGreeting(getGreetingForHour(new Date().getHours()));
+    const storedName = localStorage.getItem('userName');
+    if (storedName) {
+      setName(storedName);
+    } else {
+      setShowModal(true);
+    }
   }, []);
+
+  const handleSaveName = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputName.trim()) {
+      localStorage.setItem('userName', inputName.trim());
+      setName(inputName.trim());
+      setShowModal(false);
+    }
+  };
 
   const handleAddToCart = (product: Product) => {
     addItem(product);
@@ -62,9 +82,10 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 pb-8 page-fade-in">
+    <>
+      <div className="space-y-8 pb-8 page-fade-in">
       {/* ===== HERO SECTION ===== */}
-      <section className="relative overflow-hidden rounded-2xl p-6 md:p-10 lg:p-12" style={{ background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 50%, #F0FDFA 100%)' }}>
+      <section className="relative overflow-hidden rounded-2xl p-6 md:p-10 lg:p-12" style={{ background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--surface) 50%, var(--bg) 100%)' }}>
         <div className="absolute right-0 top-0 w-96 h-96 rounded-full bg-[#22C55E]/5 blur-[100px]" />
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="max-w-lg">
@@ -72,7 +93,7 @@ export default function DashboardPage() {
               <Sparkles size={14} /> Smart Daily Needs Platform
             </div>
             <h1 className="text-3xl md:text-4xl lg:text-[42px] font-bold tracking-tight leading-[1.15] mb-3" style={{ color: '#0F172A' }}>
-              {greeting}, <span className="text-gradient">Nihal!</span> 👋
+              {greeting}, <span className="text-gradient">{name}!</span> 👋
             </h1>
             <p className="text-base md:text-lg leading-relaxed mb-6" style={{ color: '#64748B' }}>
               Your personalized dashboard for groceries, budgets, and smart recommendations.
@@ -154,7 +175,9 @@ export default function DashboardPage() {
                 {stat.change}
               </span>
             </div>
-            <p className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--fg)' }}>{stat.value}</p>
+            <p className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--fg)' }}>
+              <CountUp target={stat.numericValue} prefix={stat.prefix} />
+            </p>
             <p className="text-sm" style={{ color: 'var(--muted)' }}>{stat.label}</p>
           </motion.div>
         ))}
@@ -291,5 +314,46 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+
+      {/* Name Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+          <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-sm" style={{ animation: 'scaleUp 0.3s ease-out' }}>
+            <h2 className="text-xl font-bold mb-4 text-center text-[#0F172A]">Welcome to ApnaKart!</h2>
+            <form onSubmit={handleSaveName} className="flex flex-col gap-4">
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Enter your name</label>
+                <input
+                  id="username"
+                  type="text"
+                  value={inputName}
+                  onChange={(e) => setInputName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#22C55E] focus:border-[#22C55E] outline-none transition-all"
+                  placeholder="e.g. Rahul"
+                  autoFocus
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-[#22C55E] text-white font-semibold py-2.5 rounded-xl hover:bg-[#16A34A] transition-colors"
+              >
+                Continue
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </>
   );
 }

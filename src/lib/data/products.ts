@@ -120,7 +120,7 @@ export const products: Product[] = [
     id: '16', name: 'Maggi Noodles', nameHindi: 'मैगी', category: 'snacks',
     price: 56, unit: '4 pack',
     image: 'https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&q=80&w=400',
-    rating: 4.5, inStock: true,
+    rating: 4.5, inStock: false,
   },
   // Beverages
   {

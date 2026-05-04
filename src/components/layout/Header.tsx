@@ -3,11 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Search, ShoppingCart, MapPin, Menu, X,
   LayoutDashboard, ShoppingBag, Wallet, Bot,
-  Moon, Sun, ChevronDown
+  Moon, Sun, ChevronDown, Heart
 } from 'lucide-react';
 import { useCartContext, useTheme } from '@/lib/context';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +18,7 @@ import { useCartSidebar } from '@/components/ui/CartSidebar';
 const navItems = [
   { href: '/', label: 'Home', icon: LayoutDashboard },
   { href: '/store', label: 'Store', icon: ShoppingBag },
+  { href: '/wishlist', label: 'Wishlist', icon: Heart },
   { href: '/budget', label: 'Budget', icon: Wallet },
   { href: '/assistant', label: 'AI Assistant', icon: Bot },
 ];
@@ -27,11 +28,15 @@ export default function Header() {
   const { totalItems, totalPrice } = useCartContext();
   const { theme, toggleTheme } = useTheme();
   const { toggleCart } = useCartSidebar();
+  const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [city, setCity] = useState('Bangalore');
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const cityRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Debounced search
@@ -45,6 +50,23 @@ export default function Header() {
     const handleScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Restore saved city
+  useEffect(() => {
+    const saved = localStorage.getItem('apnakart-city');
+    if (saved) setCity(saved);
+  }, []);
+
+  // Close city picker on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (cityRef.current && !cityRef.current.contains(e.target as Node)) {
+        setShowCityPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   // Close suggestions on outside click
@@ -93,11 +115,34 @@ export default function Header() {
                   Apna<span className="text-[var(--primary)]">Kart</span>
                 </h1>
               </Link>
-              <button className="hidden md:flex items-center gap-1 pl-3 ml-1 border-l transition-colors hover:text-[var(--primary)]" style={{ borderColor: 'var(--border-color)', color: 'var(--muted)' }}>
-                <MapPin size={13} className="text-[var(--primary)]" />
-                <span className="text-xs font-medium">Bangalore</span>
-                <ChevronDown size={11} />
-              </button>
+              <div ref={cityRef} className="relative hidden md:flex">
+                <button
+                  onClick={() => setShowCityPicker(v => !v)}
+                  className="flex items-center gap-1 pl-3 ml-1 border-l transition-colors hover:text-[var(--primary)]"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--muted)' }}
+                >
+                  <MapPin size={13} className="text-[var(--primary)]" />
+                  <span className="text-xs font-medium">{city}</span>
+                  <ChevronDown size={11} className={`transition-transform ${showCityPicker ? 'rotate-180' : ''}`} />
+                </button>
+                {showCityPicker && (
+                  <div
+                    className="absolute top-full left-0 mt-2 w-36 rounded-xl shadow-xl overflow-hidden z-50"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border-color)' }}
+                  >
+                    {['Delhi', 'Mumbai', 'Bangalore', 'Hyderabad', 'Pune'].map(c => (
+                      <button
+                        key={c}
+                        onClick={() => { setCity(c); localStorage.setItem('apnakart-city', c); setShowCityPicker(false); }}
+                        className="w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--primary-light)] hover:text-[var(--primary)]"
+                        style={{ color: c === city ? 'var(--primary)' : 'var(--fg)' }}
+                      >
+                        {c === city ? '✓ ' : ''}{c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Search — hidden on mobile */}
@@ -269,6 +314,15 @@ export default function Header() {
                 <input
                   type="text"
                   placeholder="Search groceries..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      router.push(`/store?search=${encodeURIComponent(searchQuery.trim())}`);
+                      setSearchQuery('');
+                      setIsMenuOpen(false);
+                    }
+                  }}
                   className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium"
                   style={{
                     background: 'var(--surface)',

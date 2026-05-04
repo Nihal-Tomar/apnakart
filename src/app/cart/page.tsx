@@ -7,6 +7,7 @@ import { formatPrice } from '@/lib/utils';
 import { ShoppingCart, Minus, Plus, Trash2, Truck, ShieldCheck, Sparkles, X, CheckCircle, ArrowRight, ArrowLeft, Tag } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
+import NextImage from 'next/image';
 
 const FALLBACK_IMG = "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=400";
 
@@ -23,6 +24,23 @@ export default function CartPage() {
   const delivery = totalPrice > 499 ? 0 : 40;
   const promoDiscount = promoApplied ? Math.round(totalPrice * 0.1) : 0;
   const finalTotal = totalPrice - promoDiscount + delivery;
+
+  // ── Persist a transaction to localStorage on order placement
+  const saveOrderTransaction = (amount: number) => {
+    try {
+      const key = 'apnakart-transactions';
+      const prev = JSON.parse(localStorage.getItem(key) || '[]');
+      const tx = {
+        id: `order-${Date.now()}`,
+        description: `Order (${items.length} item${items.length !== 1 ? 's' : ''})`,
+        category: 'Shopping',
+        amount,
+        date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+        type: 'debit' as const,
+      };
+      localStorage.setItem(key, JSON.stringify([tx, ...prev]));
+    } catch { /* ignore */ }
+  };
 
   const applyPromo = () => {
     if (promoCode.toUpperCase() === 'APNA2026' || promoCode.toUpperCase() === 'FIRST10') {
@@ -83,12 +101,14 @@ export default function CartPage() {
                   style={{ borderColor: 'var(--border-color)' }}
                 >
                   {/* Image */}
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50">
-                    <img
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50">
+                    <NextImage
                       src={item.product.image.startsWith('http') ? item.product.image : FALLBACK_IMG}
-                      onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                       alt={item.product.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="64px"
+                      onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                     />
                   </div>
 
@@ -209,8 +229,9 @@ export default function CartPage() {
             {/* CTA */}
             <button
               onClick={() => {
-                // Capture timestamp here — safely client-side in an event handler.
-                setTrackingId(Date.now().toString().slice(-5));
+                const ts = Date.now();
+                setTrackingId(ts.toString().slice(-5));
+                saveOrderTransaction(finalTotal);
                 setShowCheckout(true);
               }}
               className="w-full gradient-btn py-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
