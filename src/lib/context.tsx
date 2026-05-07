@@ -97,9 +97,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem('apnakart-theme') as 'light' | 'dark' | null;
-    const resolved: 'light' | 'dark' =
-      stored ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    /* Always default to light — never fall back to prefers-color-scheme */
+    const resolved: 'light' | 'dark' = stored === 'dark' ? 'dark' : 'light';
+    if (!stored) localStorage.setItem('apnakart-theme', 'light');
     setTheme(resolved);
+    document.documentElement.setAttribute('data-theme', resolved);
   }, []);
 
   const toggleTheme = () => {

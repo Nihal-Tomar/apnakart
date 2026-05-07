@@ -26,9 +26,13 @@ export default function RootLayout({
             __html: `
               try {
                 var stored = localStorage.getItem('apnakart-theme');
-                var resolved = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                /* Default is ALWAYS light — ignore system prefers-color-scheme */
+                var resolved = stored === 'dark' ? 'dark' : 'light';
+                if (!stored) localStorage.setItem('apnakart-theme', 'light');
                 document.documentElement.setAttribute('data-theme', resolved);
-              } catch (e) {}
+              } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'light');
+              }
             `,
           }}
         />

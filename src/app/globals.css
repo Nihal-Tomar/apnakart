@@ -157,3 +157,26 @@ input:focus, button:focus-visible {
   background-image: radial-gradient(circle, var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* ===== FORCE LIGHT MODE — override system prefers-color-scheme ===== */
+/* This prevents the OS dark theme from activating CSS variables when
+   no explicit data-theme="dark" attribute has been set by the user. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="dark"]) {
+    --bg: #F8FAFC;
+    --fg: #1E293B;
+    --primary: #22C55E;
+    --primary-hover: #16A34A;
+    --primary-light: #F0FDF4;
+    --secondary: #0F172A;
+    --accent: #FACC15;
+    --surface: #FFFFFF;
+    --border-color: #E2E8F0;
+    --muted: #64748B;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    --card-shadow-hover: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+    --header-bg: rgba(255,255,255,0.85);
+  }
+}
